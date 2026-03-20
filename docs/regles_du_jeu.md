@@ -67,3 +67,11 @@ Entraînez-le régulièrement, envoyez-le à l'école porcine et nourrissez-le p
 - Les **Légendes** (ceux qui ont plus de 3 victoires) ont droit à une place d'honneur au **Cimetière**.
 
 Bonne chance à tous les éleveurs ! 🐽
+
+## 8. Evolutions cibles du meta-jeu
+- Le long terme doit reposer sur des **saisons**, des **ligues** et un **Hall of Fame** plutot que sur un classement unique eternel.
+- Les cochons doivent pouvoir beneficier de **repos**, de buffs de fraicheur, voire d'un futur systeme de **lignee / heritage** pour prolonger l'attachement au compte.
+- Les courses ont vocation a proposer des **themes** et **conditions de piste** pour rendre chaque statistique utile selon le contexte.
+- Les absences courtes doivent etre protegees par des mecanismes de **conges porcins** ou d'hibernation afin de rester compatibles avec un jeu de bureau.
+- Le coeur de l'experience doit converger vers un **calendrier interactif**, des **statistiques globales** de type PMU porcin et, a terme, des **ecuries** ou integrations Slack / Teams.
+

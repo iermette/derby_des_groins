@@ -191,6 +191,12 @@
                 <div>
                     <h3 class="text-white text-2xl font-extrabold">{{ pig.name }}</h3>
                     <p class="text-white/45 text-sm font-semibold mt-1">Niveau {{ pig.level }} • {{ featured_pig.weight_profile.status_label }} • {{ "%.1f"|format(pig.weight_kg or 112) }} kg</p>
+                    {% if featured_pig.weight_profile.force_mod != 1.0 or featured_pig.weight_profile.agilite_mod != 1.0 %}
+                    <div class="flex gap-4 mt-2 text-[11px] font-black uppercase">
+                        <span class="{% if featured_pig.weight_profile.force_mod > 1.0 %}text-green-400{% else %}text-red-400{% endif %}">💪 Force x{{ featured_pig.weight_profile.force_mod }}</span>
+                        <span class="{% if featured_pig.weight_profile.agilite_mod > 1.0 %}text-green-400{% else %}text-red-400{% endif %} text-cyan-400">⚡ Agilité x{{ featured_pig.weight_profile.agilite_mod }}</span>
+                    </div>
+                    {% endif %}
                     <p class="text-cyan-200 text-sm font-bold mt-3">Repos depuis {{ featured_pig_status.rest_days }} jour(s) • {{ featured_pig_status.rest_label }}</p>
                     <p class="text-white/45 text-sm font-semibold mt-1">{{ featured_pig_status.rest_note }}</p>
                 </div>

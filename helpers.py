@@ -42,6 +42,8 @@ def init_default_config():
         'market_hour': '13',
         'market_minute': '45',
         'market_duration': '120',
+        'min_real_participants': '2',
+        'empty_race_mode': 'fill',  # 'fill' or 'cancel'
     }
     for k, v in defaults.items():
         if not GameConfig.query.filter_by(key=k).first():
@@ -97,6 +99,19 @@ def get_weight_profile(pig):
     race_factor = max(0.82, min(1.06, 1.06 - ((abs_delta / max(tolerance * 2.2, 1.0)) * 0.24)))
     injury_factor = 1.0 + min(0.35, abs_delta / max(tolerance * 3.5, 1.0))
 
+    force_mod = 1.0
+    agilite_mod = 1.0
+    if delta > 0:
+        # Trop lourd: +Force, -Agilité
+        ratio = delta / max(tolerance, 1.0)
+        force_mod = 1.0 + min(0.35, ratio * 0.12)
+        agilite_mod = 1.0 - min(0.75, ratio * 0.25)
+    elif delta < 0:
+        # Trop léger: -Force, +Agilité
+        ratio = abs(delta) / max(tolerance, 1.0)
+        force_mod = 1.0 - min(0.25, ratio * 0.08)
+        agilite_mod = 1.0 + min(0.15, ratio * 0.05)
+
     if abs_delta <= tolerance * 0.4:
         status = 'ideal'
         status_label = 'Zone ideale'
@@ -104,11 +119,11 @@ def get_weight_profile(pig):
     elif delta > tolerance:
         status = 'heavy'
         status_label = 'Trop lourd'
-        note = "Il pousse fort, mais traine trop de kilos dans les relances et les virages."
+        note = "Impact strategique : Il devient un bulldozer (Force+) mais perd toute souplesse (Agilite-)."
     elif delta < -tolerance:
         status = 'light'
         status_label = 'Trop leger'
-        note = "Il est vif, mais manque de coffre et d'impact face aux autres cochons."
+        note = "Impact strategique : Il est tres vif (Agilite+) mais manque d'impact face aux autres (Force-)."
     else:
         status = 'warning'
         status_label = 'A surveiller'
@@ -127,13 +142,24 @@ def get_weight_profile(pig):
         'race_percent': round((race_factor - 1.0) * 100, 1),
         'injury_factor': round(injury_factor, 3),
         'score_pct': max(8, min(100, int((race_factor / 1.06) * 100))),
+        'force_mod': round(force_mod, 2),
+        'agilite_mod': round(agilite_mod, 2),
     }
 
 def calculate_pig_power(pig):
-    stats = [pig.vitesse, pig.endurance, pig.agilite, pig.force, pig.intelligence, pig.moral]
+    profile = get_weight_profile(pig)
+    # Appliquer les modificateurs de poids sur les stats de base pour le calcul de puissance
+    stats = [
+        pig.vitesse,
+        pig.endurance,
+        pig.agilite * profile['agilite_mod'],
+        pig.force * profile['force_mod'],
+        pig.intelligence,
+        pig.moral
+    ]
     stat_score = sum(math.sqrt(max(0.0, stat) / 100.0) * 100 for stat in stats) / len(stats)
     condition_factor = 0.8 + (((pig.energy + pig.hunger + pig.happiness) / 3.0) / 100.0) * 0.4
-    weight_factor = get_weight_profile(pig)['race_factor']
+    weight_factor = profile['race_factor']
     return round(stat_score * condition_factor * weight_factor, 2)
 
 def xp_for_level(level):
@@ -1053,6 +1079,28 @@ def run_race_if_needed():
         if not participants:
             continue
 
+        real_participants = [p for p in participants if p.owner_name]
+        min_real = int(get_config('min_real_participants', '2'))
+        mode = get_config('empty_race_mode', 'fill')
+
+        if len(real_participants) < min_real and mode == 'cancel':
+            race.status = 'cancelled'
+            race.finished_at = now
+            # Refund bets
+            bets = Bet.query.filter_by(race_id=race.id, status='pending').all()
+            for bet in bets:
+                bet.status = 'refunded'
+                credit_user_balance(
+                    bet.user_id, bet.amount,
+                    reason_code='bet_refund',
+                    reason_label='Remboursement pari',
+                    details=f"Course #{race.id} annulee (nombre de participants reels insuffisant).",
+                    reference_type='race',
+                    reference_id=race.id,
+                )
+            db.session.commit()
+            continue
+
         participants_by_id = {participant.id: participant for participant in participants}
         order = build_weighted_finish_order(participants)
         for i, p in enumerate(order):
@@ -1167,7 +1215,7 @@ def run_race_if_needed():
         ensure_next_race()
 
 def get_race_history_entries():
-    races = Race.query.filter_by(status='finished').order_by(Race.finished_at.desc(), Race.id.desc()).all()
+    races = Race.query.filter(Race.status.in_(['finished', 'cancelled'])).order_by(Race.finished_at.desc(), Race.id.desc()).all()
     if not races:
         return []
 

@@ -292,11 +292,23 @@
                         <div class="h-2 rounded-full transition-all" style="width:{{ weight_profile.score_pct }}%;background:{{ 'linear-gradient(90deg,#059669,#6ee7b7)' if weight_profile.status == 'ideal' else ('linear-gradient(90deg,#d97706,#fbbf24)' if weight_profile.status == 'warning' else 'linear-gradient(90deg,#dc2626,#f87171)') }}"></div>
                     </div>
                     <div class="flex items-center justify-between mt-3 text-[11px] font-bold">
-                        <span class="text-white/45">Impact en course</span>
+                        <span class="text-white/45">Impact Global (Malus/Bonus)</span>
                         <span style="color:{{ '#6ee7b7' if weight_profile.race_percent >= 0 else '#f87171' }}">
                             {{ '+' if weight_profile.race_percent >= 0 else '' }}{{ "%.1f"|format(weight_profile.race_percent) }}%
                         </span>
                     </div>
+                    {% if weight_profile.force_mod != 1.0 or weight_profile.agilite_mod != 1.0 %}
+                    <div class="mt-2 pt-2 border-t border-white/5 flex items-center justify-around gap-2 text-[10px] font-black uppercase">
+                        <div class="flex items-center gap-1 {% if weight_profile.force_mod > 1.0 %}text-green-400{% elif weight_profile.force_mod < 1.0 %}text-red-400{% else %}text-white/30{% endif %}">
+                            <span>💪 Force</span>
+                            <span>{{ 'x' if weight_profile.force_mod >= 1.0 else 'x' }}{{ weight_profile.force_mod }}</span>
+                        </div>
+                        <div class="flex items-center gap-1 {% if weight_profile.agilite_mod > 1.0 %}text-green-400{% elif weight_profile.agilite_mod < 1.0 %}text-red-400{% else %}text-white/30{% endif %}">
+                            <span>⚡ Agilité</span>
+                            <span>{{ 'x' if weight_profile.agilite_mod >= 1.0 else 'x' }}{{ weight_profile.agilite_mod }}</span>
+                        </div>
+                    </div>
+                    {% endif %}
                     <p class="text-white/45 text-[11px] font-semibold mt-2">{{ weight_profile.note }}</p>
                 </div>
             </div>

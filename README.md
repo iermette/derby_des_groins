@@ -81,7 +81,20 @@ Chaque joueur possède un **cochon virtuel** qu'il doit développer comme un Tam
 - **Auditer l'activite** dans **Historique** : courses terminees, tickets et journal BitGroins
 - **Oser le Challenge de la Mort** — mise x3 si top 3, mais dernier = abattoir 🔪
 
+### 🧭 Vision long terme et rétention
+
+Le projet vise un **jeu de bureau asynchrone** capable de rester amusant plusieurs semaines sans récompenser uniquement les joueurs les plus présents.
+
+Axes prioritaires de la roadmap :
+- **Saisons et ligues** : remises à zéro partielles, divisions pour les nouveaux, Hall of Fame persistant
+- **Anti-snowball** : fatigue, repos utile, buffs de comeback et quotas de course
+- **Lignée & héritage** : généalogie, retraite des cochons légendaires, bonus de porcherie
+- **Conditions de course** : météo, thèmes hebdomadaires, poids plus lisible et plus stratégique
+- **QoL asynchrone** : congés porcins, hibernation, webhooks Slack/Teams, planification de semaine
+- **Meta sociale** : écuries, trophées `Saint Grouin`, statistiques globales type PMU porcin
+
 ### 📊 Compétences (Diagramme de Kiviat)
+
 
 Chaque cochon possède 6 compétences visualisées en radar chart :
 

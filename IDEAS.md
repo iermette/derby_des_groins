@@ -1,16 +1,38 @@
 # IDEAS
 
+## Priorites produit proposees
+
+### 1. Logiques de victoire sur le long terme
+
+- Mettre en place des **saisons** courtes (mensuelles par defaut) avec:
+  - remise a zero partielle des classements,
+  - conservation des trophees, du Hall of Fame et des metriques historiques,
+  - divisions / ligues pour separer nouveaux eleveurs et veterans.
+- Renforcer l'**anti-snowball** pour eviter qu'un joueur dominant ecrase durablement la concurrence:
+  - fatigue apres sorties consecutives,
+  - rendements decroissants a l'entrainement,
+  - buffs de comeback pour les cochons frais ou les joueurs moins actifs.
+- Ajouter un systeme de **reproduction, lignee et heritage**:
+  - retraite honorable des cochons legendaires,
+  - bonus permanents de porcherie ou de lignee,
+  - genealogie exploitable comme objectif meta.
+- Formaliser un **Hall of Fame** saisonnier:
+  - vainqueur `Saint Grouin`,
+  - meilleurs eleveurs,
+  - cochons les plus rentables,
+  - survivants emblematiques du `Challenge de la Mort`.
+
 ## Rythme des courses
 
 - Eviter `1 course par heure` comme regle par defaut. Garder la main cote admin sur le rythme, avec une config simple `mode calme / normal / evenement`.
 - Prevoir une reponse claire si une course n'a qu'un seul vrai participant:
   - soit completer avec des PNJ,
   - soit annuler ou reporter la course si le plateau est trop vide.
-- Ajouter des evenements ponctuels "grosse course du soir" ou "grand prix du vendredi" pour donner des rendez-vous plus memorables.
+- Ajouter des evenements ponctuels `grosse course du soir` ou `grand prix du vendredi` pour donner des rendez-vous plus memorables.
 
 ## Convention collective de la porcherie
 
-- Ajouter une logique de `quota hebdomadaire` type "35 heures de l'auge": un cochon ne peut courir que `2 a 3 courses maximum par semaine`.
+- Ajouter une logique de `quota hebdomadaire` type `35 heures de l'auge`: un cochon ne peut courir que `2 a 3 courses maximum par semaine`.
 - Forcer l'eleveur a choisir a l'avance ses sorties importantes selon les adversaires, le jour, les bonus de course ou l'etat du cochon.
 - Rendre la programmation des courses plus strategique que le simple spam de participations.
 - Ajouter une lecture claire de la semaine a venir dans l'interface: jours de course, quota restant, prochaine sortie planifiee.
@@ -31,6 +53,21 @@
   - alertes de fatigue si deux courses s'enchainent,
   - buff potentiel si le cochon se repose avant une grande course.
 - Cette page peut devenir le coeur du jeu asynchrone: on vient planifier sa semaine, pas juste cliquer sur une course ouverte.
+
+## Statistiques, conditions de course et equilibrage
+
+- Donner une vraie utilite aux statistiques secondaires via des **themes de course** et la **meteo**:
+  - `Pataugeoire du Lundi` sur piste boueuse pour favoriser Force et Endurance,
+  - piste seche pour favoriser Vitesse,
+  - formats speciaux pour mettre en valeur Intelligence, Agilite ou Moral.
+- Rendre le **poids de forme** plus lisible et plus punitif / strategique:
+  - un cochon sur-nourri au mais perd en Agilite,
+  - il gagne en Force et capacite de contact,
+  - la presentation visuelle doit rendre l'etat du cochon immediatement compréhensible.
+- Revoir l'**Ecole porcine** pour eviter le maxage trop rapide des stats:
+  - limiter les gains bruts,
+  - introduire des specialisations (`sprinteur`, `roublard`, `marathonien`, etc.),
+  - garder le cout moral comme vrai arbitrage plutot qu'une formalite.
 
 ## Fatigue, porc-out et RTT
 
@@ -53,7 +90,7 @@
   - le systeme maintient le minimum vital de l'enclos,
   - le joueur absent ne perd pas son cochon juste parce qu'il etait en deplacement.
 
-## Anti-snowball et saisons
+## Anti-snowball et seasons
 
 - Eviter que les memes eleveurs soient toujours en tete des stats globales.
 - Ajouter des saisons avec remise a zero partielle des classements, tout en gardant les trophees et l'historique.
@@ -72,7 +109,7 @@
 ## Blessures et veterinaire
 
 - Un cochon pourrait se blesser pendant une course.
-- En cas de blessure grave, passage chez le veterinaire avec un mini-jeu type "Docteur Maboul" ou puzzle d'os.
+- En cas de blessure grave, passage chez le veterinaire avec un mini-jeu type `Docteur Maboul` ou puzzle d'os.
 - Le mini-jeu aurait un temps limite:
   - reussite: le cochon survit, avec eventuellement un malus temporaire,
   - echec: grosse sequelle ou deces sur la table d'operation dans les cas critiques.
@@ -82,7 +119,7 @@
 
 - Autoriser la reproduction entre cochons pour creer des porcelets.
 - Heriter partiellement des stats, de la rarete, de l'origine ou d'un trait special.
-- Permettre de tenter des combinaisons improbables pour faire apparaitre des cochons legendaires, meme a partir de "grouillots".
+- Permettre de tenter des combinaisons improbables pour faire apparaitre des cochons legendaires, meme a partir de `grouillots`.
 - Ajouter un arbre genealogique ou historique de lignee pour raconter les familles de champions.
 
 ## Semaine de la porcherie
@@ -100,7 +137,12 @@
 
 ## Meta-jeu et communaute
 
-- Creer un systeme d'equipes, clans ou ecuries pour jouer en groupe.
+- Creer un systeme d'**ecuries / clans** pour jouer en groupe et mutualiser une partie des ressources ou des objectifs.
+- Ajouter des **alertes et webhooks** vers Slack / Teams pour:
+  - resultats de courses,
+  - ouverture et cloture des encheres,
+  - urgences veterinaire,
+  - rappels de quota ou de course planifiee.
 - Ajouter un Hall of Fame des saisons, des champions et des eleveurs les plus marquants.
 - Faire du trophee physique un vrai prolongement du jeu:
   - nom possible: `Le Saint Grouin`,
@@ -108,6 +150,24 @@
   - transmission de gagnant en gagnant,
   - ceremonie pendant les reunions sur site.
 - Variante delire assume: le trophee pourrait aussi servir de chope de victoire.
+
+## Menus et interfaces manquants
+
+- Ajouter un **menu Calendrier / Planification** interactif comme coeur du jeu asynchrone:
+  - vue hebdomadaire / mensuelle,
+  - quota `35h de l'auge`,
+  - themes de course,
+  - inscription en un clic.
+- Ajouter un **menu Genealogie / Arbre genealogique**:
+  - anciens cochons du joueur,
+  - morts, retraites, legendes,
+  - statistiques globales de l'elevage.
+- Renforcer le **dashboard d'accueil** avec des pronostics de communaute et des signaux pre-course (`70% des joueurs ont parie sur Porcinator`).
+- Ajouter une page de **statistiques globales / PMU porcin**:
+  - cotes historiques,
+  - cochons les plus rentables,
+  - plus gros gains de la semaine,
+  - tendances utiles pour les Tickets Bacon.
 
 ## Trophees et ceremonies
 

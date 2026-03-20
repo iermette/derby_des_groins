@@ -79,3 +79,11 @@ derby_des_groins/
 ## Choix de Design
 La direction artistique est basée sur le **"dark mode" amusant** avec des dégradés intenses (rouge, jaune, violet), des polices sympathiques (Lilita One, Nunito) et l'utilisation omniprésente de l'emoji 🐷 pour donner un aspect léger et addictif.
 L'approche choisie pour CSS est **Tailwind CDN**.
+
+## Roadmap UX / meta-jeu
+- **Calendrier / planification** : la page Courses doit evoluer vers une vraie vue hebdomadaire / mensuelle, avec quotas restants, themes de course, alertes de fatigue et inscription en un clic.
+- **Genealogie** : une future vue dediee devra historiser les lignees, les retraites, les morts et les cochons legendaires du joueur.
+- **PMU porcin** : une page de statistiques globales pourra centraliser cotes historiques, plus gros gains, cochons les plus rentables et tendances de paris.
+- **Integrations bureau** : webhooks Slack / Teams et alertes asynchrones pour faire vivre le jeu hors de l'interface web.
+- **Saisons / ligues** : l'architecture devra supporter remises a zero partielles, divisions et Hall of Fame persistant sans perdre l'historique meta.
+

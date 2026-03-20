@@ -34,6 +34,8 @@ def admin():
             'market_hour': get_config('market_hour', '13'),
             'market_minute': get_config('market_minute', '45'),
             'market_duration': get_config('market_duration', '120'),
+            'min_real_participants': get_config('min_real_participants', '2'),
+            'empty_race_mode': get_config('empty_race_mode', 'fill'),
         },
         jours=JOURS_FR
     )
@@ -47,7 +49,11 @@ def admin_save():
     if not user or not user.is_admin:
         return redirect(url_for('main.index'))
 
-    for key in ['race_hour', 'race_minute', 'market_day', 'market_hour', 'market_minute', 'market_duration']:
+    keys = [
+        'race_hour', 'race_minute', 'market_day', 'market_hour',
+        'market_minute', 'market_duration', 'min_real_participants', 'empty_race_mode'
+    ]
+    for key in keys:
         val = request.form.get(key)
         if val is not None:
             set_config(key, val)

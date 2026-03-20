@@ -175,6 +175,24 @@
                     </div>
                 </div>
 
+                <h3 class="font-title text-lg text-white mb-3 mt-6">⚙️ Gestion des Courses Vides</h3>
+                <p class="text-white/40 text-xs font-semibold mb-4">Règle si le nombre de participants réels est insuffisant.</p>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="text-white/60 text-xs font-bold block mb-1">Minimum réels</label>
+                        <input type="number" name="min_real_participants" value="{{ config.min_real_participants }}" min="0" max="8"
+                               class="input-admin w-full">
+                    </div>
+                    <div>
+                        <label class="text-white/60 text-xs font-bold block mb-1">Action</label>
+                        <select name="empty_race_mode" class="input-admin w-full">
+                            <option value="fill" {% if config.empty_race_mode == 'fill' %}selected{% endif %}>Remplir avec PNJ</option>
+                            <option value="cancel" {% if config.empty_race_mode == 'cancel' %}selected{% endif %}>Annuler la course</option>
+                        </select>
+                    </div>
+                </div>
+
                 <button type="submit" class="btn-admin w-full mt-2">
                     💾 Sauvegarder la configuration
                 </button>
