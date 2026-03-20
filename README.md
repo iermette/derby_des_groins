@@ -142,6 +142,8 @@ cd derby_des_groins
 pip install -r requirements.txt
 ```
 
+> Note compatibilite : sur Python recent (notamment 3.14), le projet a besoin d'une version recente de `SQLAlchemy`. Le `requirements.txt` du depot est pingle pour eviter l'erreur `SQLCoreOperations` vue sur certains postes.
+
 ### 3. Lancer l'application : `python app.py`
 4. Accès local : `http://127.0.0.1:5000`
 
