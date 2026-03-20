@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, redirect, url_for, session
+from sqlalchemy import func
 from datetime import datetime
 
 from extensions import db
@@ -196,37 +197,219 @@ def classement():
     rankings = []
 
     for u in all_users:
+        # --- Stats courses ---
         total_wins = db.session.query(db.func.sum(Pig.races_won)).filter(Pig.user_id == u.id).scalar() or 0
         total_races = db.session.query(db.func.sum(Pig.races_entered)).filter(Pig.user_id == u.id).scalar() or 0
-        dead_pigs_count = Pig.query.filter_by(user_id=u.id, is_alive=False).count()
         win_rate = (total_wins / total_races * 100) if total_races > 0 else 0
 
+        # --- Stats morts par cause ---
+        dead_pigs = Pig.query.filter_by(user_id=u.id, is_alive=False).all()
+        dead_pigs_count = len([p for p in dead_pigs if p.death_cause != 'vendu'])
+        deaths_by_cause = {}
+        for p in dead_pigs:
+            if p.death_cause and p.death_cause != 'vendu':
+                deaths_by_cause[p.death_cause] = deaths_by_cause.get(p.death_cause, 0) + 1
+        deaths_challenge = deaths_by_cause.get('challenge', 0)
+        deaths_blessure = deaths_by_cause.get('blessure', 0)
+        deaths_sacrifice = deaths_by_cause.get('sacrifice_volontaire', 0) + deaths_by_cause.get('sacrifice', 0)
+        deaths_vieillesse = deaths_by_cause.get('vieillesse', 0)
+        legendary_dead = sum(1 for p in dead_pigs if p.death_cause != 'vendu' and (p.races_won or 0) >= 3)
+
+        # --- Stats paris ---
+        user_bets = Bet.query.filter_by(user_id=u.id).all()
+        total_bets = len(user_bets)
+        won_bets = [b for b in user_bets if b.status == 'won']
+        lost_bets = [b for b in user_bets if b.status == 'lost']
+        settled_bets = won_bets + lost_bets
+        total_staked = round(sum(b.amount or 0 for b in user_bets), 2)
+        total_winnings = round(sum(b.winnings or 0 for b in won_bets), 2)
+        bet_profit = round(total_winnings - sum(b.amount or 0 for b in settled_bets), 2)
+        bet_win_rate = round((len(won_bets) / len(settled_bets)) * 100, 1) if settled_bets else 0.0
+        best_odds_hit = max((b.odds_at_bet for b in won_bets), default=0.0)
+
+        # --- Stats elevage ---
+        all_pigs = Pig.query.filter_by(user_id=u.id).all()
+        active_pigs = [p for p in all_pigs if p.is_alive]
+        best_pig = max(all_pigs, key=lambda p: (p.races_won or 0, p.level or 0), default=None)
+        max_level = max((p.level or 1 for p in all_pigs), default=1)
+        total_school = sum(p.school_sessions_completed or 0 for p in all_pigs)
+        total_xp = sum(p.xp or 0 for p in all_pigs)
+        legendary_count = sum(1 for p in all_pigs if p.rarity == 'legendaire')
+
+        # --- Stats depenses (BalanceTransaction) ---
+        total_spent_on_food = db.session.query(
+            func.coalesce(func.sum(func.abs(BalanceTransaction.amount)), 0.0)
+        ).filter(
+            BalanceTransaction.user_id == u.id,
+            BalanceTransaction.reason_code == 'feed_purchase'
+        ).scalar() or 0.0
+        total_earned = db.session.query(
+            func.coalesce(func.sum(BalanceTransaction.amount), 0.0)
+        ).filter(
+            BalanceTransaction.user_id == u.id,
+            BalanceTransaction.amount > 0,
+            BalanceTransaction.reason_code != 'snapshot'
+        ).scalar() or 0.0
+
+        # --- Trophees ---
         trophies = []
-        if u.balance >= 500: trophies.append({'n': 'Crésus', 'e': '💰', 'd': 'Avoir plus de 500 BG'})
-        if total_wins >= 10: trophies.append({'n': 'Légende', 'e': '🏆', 'd': '10 victoires au total'})
-        if dead_pigs_count >= 5: trophies.append({'n': 'Boucher', 'e': '🔪', 'd': '5 cochons à l\'abattoir'})
-        if total_races >= 50: trophies.append({'n': 'Vétéran', 'e': '🎖️', 'd': '50 courses disputées'})
+        if u.balance >= 500: trophies.append({'n': 'Cresus', 'e': '💰', 'd': 'Plus de 500 BG en caisse'})
+        if u.balance >= 1000: trophies.append({'n': 'Oligarque', 'e': '👑', 'd': 'Plus de 1000 BG en caisse'})
+        if total_wins >= 10: trophies.append({'n': 'Legende', 'e': '🏆', 'd': '10 victoires au total'})
+        if total_wins >= 25: trophies.append({'n': 'Dynastie', 'e': '🏛️', 'd': '25 victoires au total'})
+        if dead_pigs_count >= 5: trophies.append({'n': 'Boucher', 'e': '🔪', 'd': '5 cochons morts'})
+        if dead_pigs_count >= 10: trophies.append({'n': 'Equarrisseur', 'e': '💀', 'd': '10 cochons morts'})
+        if total_races >= 50: trophies.append({'n': 'Veteran', 'e': '🎖️', 'd': '50 courses disputees'})
+        if total_races >= 100: trophies.append({'n': 'Marathonien', 'e': '🏃', 'd': '100 courses disputees'})
+        if deaths_challenge >= 3: trophies.append({'n': 'Kamikaze', 'e': '💣', 'd': '3 cochons morts au Challenge'})
+        if deaths_blessure >= 3: trophies.append({'n': 'Negligent', 'e': '🩹', 'd': '3 cochons morts par blessure'})
+        if deaths_vieillesse >= 2: trophies.append({'n': 'Eleveur Sage', 'e': '🧓', 'd': '2 cochons morts de vieillesse'})
+        if total_school >= 20: trophies.append({'n': 'Pedagogue', 'e': '📚', 'd': '20 sessions ecole'})
+        if total_school >= 50: trophies.append({'n': 'Doyen', 'e': '🎓', 'd': '50 sessions ecole'})
+        if len(won_bets) >= 10: trophies.append({'n': 'Parieur', 'e': '🎟️', 'd': '10 paris gagnes'})
+        if best_odds_hit >= 5.0: trophies.append({'n': 'Sniper', 'e': '🎯', 'd': 'Pari gagne a x5+'})
+        if best_odds_hit >= 10.0: trophies.append({'n': 'Fou Furieux', 'e': '🔥', 'd': 'Pari gagne a x10+'})
+        if bet_profit <= -100: trophies.append({'n': 'Ruine', 'e': '📉', 'd': 'Perdu plus de 100 BG en paris'})
+        if legendary_count >= 1: trophies.append({'n': 'Collectionneur', 'e': '🟡', 'd': 'Posseder un cochon legendaire'})
+        if deaths_sacrifice >= 3: trophies.append({'n': 'Sans Pitie', 'e': '🗡️', 'd': '3 cochons sacrifies'})
+        if legendary_dead >= 1: trophies.append({'n': 'Sacrilege', 'e': '⚱️', 'd': 'Avoir perdu un cochon legendaire'})
+        if total_bets > 0 and len(won_bets) == 0: trophies.append({'n': 'La Poisse', 'e': '🐌', 'd': 'Aucun pari gagne'})
+        if win_rate >= 40 and total_races >= 10: trophies.append({'n': 'Stratege', 'e': '🧠', 'd': '40%+ win rate (10+ courses)'})
 
         rankings.append({
             'user': u,
+            # Courses
             'total_wins': total_wins,
             'total_races': total_races,
             'win_rate': round(win_rate, 1),
+            # Morts
             'dead_count': dead_pigs_count,
+            'deaths_challenge': deaths_challenge,
+            'deaths_blessure': deaths_blessure,
+            'deaths_sacrifice': deaths_sacrifice,
+            'deaths_vieillesse': deaths_vieillesse,
+            'legendary_dead': legendary_dead,
+            # Paris
+            'total_bets': total_bets,
+            'won_bets': len(won_bets),
+            'lost_bets': len(lost_bets),
+            'total_staked': total_staked,
+            'total_winnings': total_winnings,
+            'bet_profit': bet_profit,
+            'bet_win_rate': bet_win_rate,
+            'best_odds_hit': round(best_odds_hit, 1),
+            # Elevage
+            'best_pig': best_pig,
+            'max_level': max_level,
+            'total_school': total_school,
+            'total_xp': total_xp,
+            'legendary_count': legendary_count,
+            'active_pigs_count': len(active_pigs),
+            'total_spent_on_food': round(float(total_spent_on_food), 2),
+            'total_earned': round(float(total_earned), 2),
+            # Meta
             'trophies': trophies,
-            'score': round(u.balance + (total_wins * 50), 2)
+            'score': round(u.balance + (total_wins * 50), 2),
         })
 
     rankings.sort(key=lambda x: x['score'], reverse=True)
 
+    # --- Charts top 5 ---
     top_5 = rankings[:5]
+    all_labels = [r['user'].username for r in rankings]
     chart_data = {
         'labels': [r['user'].username for r in top_5],
         'balances': [r['user'].balance for r in top_5],
-        'wins': [r['total_wins'] for r in top_5]
+        'wins': [r['total_wins'] for r in top_5],
+        'dead': [r['dead_count'] for r in top_5],
+        'all_labels': all_labels,
+        'all_dead': [r['dead_count'] for r in rankings],
+        'all_challenge': [r['deaths_challenge'] for r in rankings],
+        'all_blessure': [r['deaths_blessure'] for r in rankings],
+        'all_sacrifice': [r['deaths_sacrifice'] for r in rankings],
+        'all_vieillesse': [r['deaths_vieillesse'] for r in rankings],
+        'all_bet_profit': [r['bet_profit'] for r in rankings],
+        'all_win_rate': [r['win_rate'] for r in rankings],
+        'all_races': [r['total_races'] for r in rankings],
     }
 
-    return render_template('classement.html', user=user, rankings=rankings, chart_data=chart_data)
+    # --- Awards speciaux ---
+    def best_by(key, reverse=True):
+        valid = [r for r in rankings if r.get(key, 0)]
+        if not valid:
+            return None
+        return (max if reverse else min)(valid, key=lambda r: r[key])
+
+    awards = []
+
+    a = best_by('score')
+    if a: awards.append({'emoji': '👑', 'title': 'Roi du Derby', 'desc': 'Meilleur score global', 'user': a['user'].username, 'value': f"{a['score']:.0f} pts", 'color': 'yellow'})
+
+    a = best_by('total_wins')
+    if a and a['total_wins'] > 0: awards.append({'emoji': '🏆', 'title': 'Champion Absolu', 'desc': 'Le plus de victoires', 'user': a['user'].username, 'value': f"{a['total_wins']} victoire(s)", 'color': 'green'})
+
+    a = best_by('dead_count')
+    if a and a['dead_count'] > 0: awards.append({'emoji': '🔪', 'title': 'Boucher en Chef', 'desc': 'Le plus de cochons morts', 'user': a['user'].username, 'value': f"{a['dead_count']} victime(s)", 'color': 'red'})
+
+    a = best_by('deaths_challenge')
+    if a and a['deaths_challenge'] > 0: awards.append({'emoji': '💀', 'title': 'Kamikaze Supreme', 'desc': 'Le plus de morts au Challenge', 'user': a['user'].username, 'value': f"{a['deaths_challenge']} sacrifice(s)", 'color': 'purple'})
+
+    a = best_by('total_staked')
+    if a and a['total_staked'] > 0: awards.append({'emoji': '🎰', 'title': 'Le Flambeur', 'desc': 'Le plus mise au total', 'user': a['user'].username, 'value': f"{a['total_staked']:.0f} BG mises", 'color': 'amber'})
+
+    a = best_by('bet_profit')
+    if a and a['bet_profit'] > 0: awards.append({'emoji': '🤑', 'title': 'Le Bookmaker', 'desc': 'Le plus gros profit aux paris', 'user': a['user'].username, 'value': f"+{a['bet_profit']:.0f} BG", 'color': 'emerald'})
+
+    a = best_by('bet_profit', reverse=False)
+    if a and a['bet_profit'] < 0: awards.append({'emoji': '📉', 'title': 'Le Pigeon', 'desc': 'Les pires pertes aux paris', 'user': a['user'].username, 'value': f"{a['bet_profit']:.0f} BG", 'color': 'red'})
+
+    a = best_by('total_school')
+    if a and a['total_school'] > 0: awards.append({'emoji': '🎓', 'title': "L'Intellectuel", 'desc': 'Le plus de sessions ecole', 'user': a['user'].username, 'value': f"{a['total_school']} sessions", 'color': 'blue'})
+
+    a = best_by('best_odds_hit')
+    if a and a['best_odds_hit'] >= 2.0: awards.append({'emoji': '🎯', 'title': 'Le Sniper', 'desc': 'La meilleure cote touchee', 'user': a['user'].username, 'value': f"x{a['best_odds_hit']:.1f}", 'color': 'cyan'})
+
+    a = best_by('total_races')
+    if a and a['total_races'] > 0: awards.append({'emoji': '🏃', 'title': 'Le Marathonien', 'desc': 'Le plus de courses disputees', 'user': a['user'].username, 'value': f"{a['total_races']} courses", 'color': 'indigo'})
+
+    a = best_by('deaths_sacrifice')
+    if a and a['deaths_sacrifice'] > 0: awards.append({'emoji': '🗡️', 'title': 'Sans Pitie', 'desc': 'Le plus de cochons sacrifies', 'user': a['user'].username, 'value': f"{a['deaths_sacrifice']} sacrifice(s)", 'color': 'rose'})
+
+    a = best_by('deaths_blessure')
+    if a and a['deaths_blessure'] > 0: awards.append({'emoji': '🩹', 'title': 'Le Negligent', 'desc': 'Le plus de morts par blessure non soignee', 'user': a['user'].username, 'value': f"{a['deaths_blessure']} victime(s)", 'color': 'orange'})
+
+    a = best_by('total_spent_on_food')
+    if a and a['total_spent_on_food'] > 0: awards.append({'emoji': '🌽', 'title': 'Le Nourricier', 'desc': 'Le plus depense en nourriture', 'user': a['user'].username, 'value': f"{a['total_spent_on_food']:.0f} BG", 'color': 'lime'})
+
+    a = best_by('legendary_dead')
+    if a and a['legendary_dead'] > 0: awards.append({'emoji': '⚱️', 'title': 'Le Sacrilege', 'desc': 'Le plus de legendaires perdus', 'user': a['user'].username, 'value': f"{a['legendary_dead']} legendaire(s)", 'color': 'fuchsia'})
+
+    a = best_by('total_xp')
+    if a and a['total_xp'] > 0: awards.append({'emoji': '⭐', 'title': "L'Eleveur Supreme", 'desc': 'Le plus d\'XP accumulee', 'user': a['user'].username, 'value': f"{a['total_xp']} XP", 'color': 'violet'})
+
+    a = best_by('max_level')
+    if a and a['max_level'] > 1: awards.append({'emoji': '🔝', 'title': 'Le Maitre', 'desc': 'Cochon au plus haut niveau', 'user': a['user'].username, 'value': f"Niv. {a['max_level']}", 'color': 'teal'})
+
+    a = best_by('total_earned')
+    if a and a['total_earned'] > 0: awards.append({'emoji': '💸', 'title': 'La Machine a BG', 'desc': 'Le plus de BitGroins gagnes au total', 'user': a['user'].username, 'value': f"{a['total_earned']:.0f} BG", 'color': 'emerald'})
+
+    a = best_by('deaths_vieillesse')
+    if a and a['deaths_vieillesse'] > 0: awards.append({'emoji': '🧓', 'title': 'Eleveur Patient', 'desc': 'Le plus de cochons morts de vieillesse', 'user': a['user'].username, 'value': f"{a['deaths_vieillesse']} retraite(s)", 'color': 'sky'})
+
+    # Le Looser: worst win rate with at least some races
+    losers = [r for r in rankings if r['total_races'] >= 5]
+    if losers:
+        loser = min(losers, key=lambda r: r['win_rate'])
+        if loser['win_rate'] < 30:
+            awards.append({'emoji': '🐌', 'title': 'Le Looser Officiel', 'desc': 'Pire taux de victoire (5+ courses)', 'user': loser['user'].username, 'value': f"{loser['win_rate']}%", 'color': 'slate'})
+
+    # Le Survivant: most races with no deaths
+    survivors = [r for r in rankings if r['total_races'] >= 10 and r['dead_count'] == 0]
+    if survivors:
+        survivor = max(survivors, key=lambda r: r['total_races'])
+        awards.append({'emoji': '🛡️', 'title': 'Le Survivant', 'desc': 'Le plus de courses sans aucune perte', 'user': survivor['user'].username, 'value': f"{survivor['total_races']} courses, 0 mort", 'color': 'emerald'})
+
+    return render_template('classement.html', user=user, rankings=rankings, chart_data=chart_data, awards=awards, active_page='classement')
 
 
 @main_bp.route('/legendes-pop')
