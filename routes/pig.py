@@ -6,13 +6,15 @@ from extensions import db
 from models import User, Pig
 from data import (
     CEREALS, TRAININGS, SCHOOL_LESSONS, SCHOOL_COOLDOWN_MINUTES,
-    PIG_EMOJIS, PIG_ORIGINS, STAT_LABELS, RARITIES,
+    PIG_EMOJIS, PIG_ORIGINS, STAT_LABELS, RARITIES, BREEDING_COST,
 )
 from helpers import (
     get_user_active_pigs, update_pig_state, calculate_pig_power, xp_for_level,
     get_cooldown_remaining, format_duration_short, get_seconds_until,
     get_weight_profile, get_adoption_cost, get_active_listing_count,
-    get_pig_slot_count, maybe_grant_emergency_relief, check_level_up,
+    get_pig_slot_count, get_max_pig_slots, get_feeding_cost_multiplier,
+    get_lineage_label, get_pig_heritage_value, can_retire_into_heritage,
+    retire_pig_into_heritage, create_offspring, maybe_grant_emergency_relief, check_level_up,
     adjust_pig_weight, apply_origin_bonus, generate_weight_kg_for_profile,
     debit_user_balance, credit_user_balance,
     reserve_pig_challenge_slot, release_pig_challenge_slot,
@@ -34,6 +36,8 @@ def mon_cochon():
     pigs = get_user_active_pigs(user)
     adoption_cost = get_adoption_cost(user)
     active_listing_count = get_active_listing_count(user)
+    feeding_multiplier = get_feeding_cost_multiplier(user)
+    max_slots = get_max_pig_slots(user)
 
     pigs_data = []
     for p in pigs:
@@ -46,6 +50,9 @@ def mon_cochon():
         weight_profile = get_weight_profile(p)
         pigs_data.append({
             'pig': p,
+            'lineage_label': get_lineage_label(p),
+            'heritage_value': get_pig_heritage_value(p),
+            'can_retire_into_heritage': can_retire_into_heritage(p),
             'races_remaining': races_remaining,
             'age_days': age_days,
             'rarity_info': rarity_info,
@@ -62,7 +69,8 @@ def mon_cochon():
         user=user, pigs_data=pigs_data, cereals=CEREALS, trainings=TRAININGS,
         school_lessons=SCHOOL_LESSONS, school_cooldown_minutes=SCHOOL_COOLDOWN_MINUTES,
         pig_emojis=PIG_EMOJIS, stat_labels=STAT_LABELS,
-        adoption_cost=adoption_cost, active_listing_count=active_listing_count
+        adoption_cost=adoption_cost, active_listing_count=active_listing_count,
+        feeding_multiplier=feeding_multiplier, max_slots=max_slots, breeding_cost=BREEDING_COST
     )
 
 
@@ -72,8 +80,9 @@ def adopt_second_pig():
         return redirect(url_for('auth.login'))
     user = User.query.get(session['user_id'])
     active_pigs = Pig.query.filter_by(user_id=user.id, is_alive=True).all()
-    if get_pig_slot_count(user) >= 2:
-        flash("Tu as déjà le maximum de cochons (2) !", "warning")
+    max_slots = get_max_pig_slots(user)
+    if get_pig_slot_count(user) >= max_slots:
+        flash(f"Tu as déjà le maximum de cochons ({max_slots}) !", "warning")
         return redirect(url_for('pig.mon_cochon'))
 
     cost = get_adoption_cost(user)
@@ -94,17 +103,18 @@ def adopt_second_pig():
     origin = random.choice(PIG_ORIGINS)
     new_pig = Pig(
         user_id=user.id,
-        name=f"Second de {user.username}" if active_pigs else f"Rescapé de {user.username}",
+        name=f"Recrue de {user.username}" if active_pigs else f"Rescapé de {user.username}",
         emoji='🐖',
         origin_country=origin['country'],
-        origin_flag=origin['flag']
+        origin_flag=origin['flag'],
+        lineage_name=f"Maison {user.username}",
     )
     apply_origin_bonus(new_pig, origin)
     new_pig.weight_kg = generate_weight_kg_for_profile(new_pig)
     db.session.add(new_pig)
     db.session.commit()
     if active_pigs:
-        flash("✨ Nouveau cochon adopté ! Bienvenue dans l'écurie.", "success")
+        flash("✨ Nouveau cochon adopté ! Bienvenue dans la porcherie, mais attention: chaque bouche en plus rend l'alimentation plus coûteuse.", "success")
     else:
         flash("✨ Un cochon de secours rejoint ton élevage. C'est reparti.", "success")
     return redirect(url_for('pig.mon_cochon'))
@@ -129,11 +139,13 @@ def feed():
     if pig.hunger >= 95:
         flash("Ton cochon n'a plus faim !", "warning")
         return redirect(url_for('pig.mon_cochon'))
+    feeding_multiplier = get_feeding_cost_multiplier(user)
+    effective_cost = round(cereal['cost'] * feeding_multiplier, 2)
     if not debit_user_balance(
-        user.id, cereal['cost'],
+        user.id, effective_cost,
         reason_code='feed_purchase',
         reason_label='Nourriture achetee',
-        details=f"{cereal['name']} pour {pig.name}.",
+        details=f"{cereal['name']} pour {pig.name}. Cout x{feeding_multiplier:.2f} avec {Pig.query.filter_by(user_id=user.id, is_alive=True).count()} cochon(s).",
         reference_type='pig',
         reference_id=pig.id,
     ):
@@ -149,7 +161,7 @@ def feed():
             setattr(pig, stat, min(100, current + boost))
     pig.last_updated = datetime.utcnow()
     db.session.commit()
-    flash(f"{cereal['emoji']} {cereal['name']} donné ! Miam !", "success")
+    flash(f"{cereal['emoji']} {cereal['name']} donné ! Miam ! Coût réel: {effective_cost:.0f} BG (x{feeding_multiplier:.2f} de pression d'élevage).", "success")
     return redirect(url_for('pig.mon_cochon'))
 
 
@@ -358,8 +370,61 @@ def cancel_challenge():
         reference_type='pig',
         reference_id=pig.id,
     )
-    db.session.commit()
     flash(f"😰 Challenge annulé pour {pig.name}... Remboursement : {refund:.0f} BG (50%)", "warning")
+    return redirect(url_for('pig.mon_cochon'))
+
+@pig_bp.route('/breed-pig', methods=['POST'])
+def breed_pig():
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    user = User.query.get(session['user_id'])
+    parent_a = Pig.query.get(request.form.get('pig_id', type=int))
+    parent_b = Pig.query.get(request.form.get('partner_id', type=int))
+    child_name = request.form.get('child_name', '').strip()
+
+    if not parent_a or not parent_b or parent_a.user_id != user.id or parent_b.user_id != user.id:
+        flash("Parents introuvables !", "error")
+        return redirect(url_for('pig.mon_cochon'))
+    if parent_a.id == parent_b.id:
+        flash("Il faut deux cochons distincts pour lancer une lignée.", "warning")
+        return redirect(url_for('pig.mon_cochon'))
+    if not parent_a.is_alive or not parent_b.is_alive:
+        flash("La reproduction exige deux cochons actifs.", "warning")
+        return redirect(url_for('pig.mon_cochon'))
+    if get_pig_slot_count(user) >= get_max_pig_slots(user):
+        flash("La porcherie est pleine. Vends, retire ou perds un cochon avant de lancer une nouvelle portée.", "warning")
+        return redirect(url_for('pig.mon_cochon'))
+    if not debit_user_balance(
+        user.id, BREEDING_COST,
+        reason_code='pig_breeding',
+        reason_label='Lancement de portee',
+        details=f"Portee entre {parent_a.name} et {parent_b.name}.",
+        reference_type='user',
+        reference_id=user.id,
+    ):
+        flash(f"Il faut {BREEDING_COST:.0f} BG pour financer la portée.", "error")
+        return redirect(url_for('pig.mon_cochon'))
+
+    piglet = create_offspring(user, parent_a, parent_b, name=child_name or None)
+    db.session.add(piglet)
+    db.session.commit()
+    flash(f"🐣 Nouvelle portée ! {piglet.name} rejoint la lignée {piglet.lineage_name} (génération {piglet.generation}). Pense à son budget nourriture: plus tu as de cochons, plus chaque repas coûte cher.", "success")
+    return redirect(url_for('pig.mon_cochon'))
+
+@pig_bp.route('/retire-pig-heritage', methods=['POST'])
+def retire_pig_heritage():
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    user = User.query.get(session['user_id'])
+    pig = Pig.query.get(request.form.get('pig_id', type=int))
+    if not pig or pig.user_id != user.id or not pig.is_alive:
+        flash("Cochon introuvable !", "error")
+        return redirect(url_for('pig.mon_cochon'))
+    bonus = retire_pig_into_heritage(user, pig)
+    if bonus <= 0:
+        flash("Seuls les cochons légendaires ou les champions à 3 victoires peuvent être retirés comme ancêtres fondateurs.", "warning")
+        return redirect(url_for('pig.mon_cochon'))
+    flash(f"🏛️ {pig.name} prend une retraite d'honneur. La porcherie gagne +{bonus:.1f} d'héritage permanent et sa lignée est renforcée.", "success")
     return redirect(url_for('pig.mon_cochon'))
 
 

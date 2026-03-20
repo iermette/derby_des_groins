@@ -15,6 +15,7 @@ class User(db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_relief_at = db.Column(db.DateTime, nullable=True)
+    barn_heritage_bonus = db.Column(db.Float, default=0.0)
     bets = db.relationship('Bet', backref='user', lazy=True)
     balance_transactions = db.relationship('BalanceTransaction', backref='user', lazy=True)
     course_plans = db.relationship('CoursePlan', backref='user', lazy=True)
@@ -72,6 +73,13 @@ class Pig(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_updated = db.Column(db.DateTime, default=datetime.utcnow)
     last_school_at = db.Column(db.DateTime, nullable=True)
+
+    lineage_name = db.Column(db.String(80), nullable=True)
+    generation = db.Column(db.Integer, default=1)
+    lineage_boost = db.Column(db.Float, default=0.0)
+    sire_id = db.Column(db.Integer, db.ForeignKey('pig.id'), nullable=True)
+    dam_id = db.Column(db.Integer, db.ForeignKey('pig.id'), nullable=True)
+    retired_into_heritage = db.Column(db.Boolean, default=False)
 
     owner = db.relationship('User', backref=db.backref('pigs', lazy=True))
 

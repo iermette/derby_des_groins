@@ -12,7 +12,8 @@ from data import (
     PIGS, PIG_ORIGINS, PIG_EMOJIS, PIG_NAME_PREFIXES, PIG_NAME_SUFFIXES,
     RARITIES, CHARCUTERIE, CHARCUTERIE_PREMIUM, EPITAPHS, BET_TYPES,
     EMERGENCY_RELIEF_THRESHOLD, EMERGENCY_RELIEF_AMOUNT, EMERGENCY_RELIEF_HOURS,
-    SECOND_PIG_COST, REPLACEMENT_PIG_COST,
+    SECOND_PIG_COST, REPLACEMENT_PIG_COST, MAX_PIG_SLOTS, BREEDING_COST,
+    RETIREMENT_HERITAGE_MIN_WINS, FEEDING_PRESSURE_PER_PIG,
     DEFAULT_PIG_WEIGHT_KG, MIN_PIG_WEIGHT_KG, MAX_PIG_WEIGHT_KG,
     MIN_INJURY_RISK, MAX_INJURY_RISK, VET_RESPONSE_MINUTES,
     RACE_APPEARANCE_REWARD, RACE_POSITION_REWARDS,
@@ -227,13 +228,84 @@ def get_pig_slot_count(user):
     active_pigs = Pig.query.filter_by(user_id=user.id, is_alive=True).count()
     return active_pigs + get_active_listing_count(user)
 
+def get_max_pig_slots(user=None):
+    return MAX_PIG_SLOTS
+
 def get_adoption_cost(user):
     slot_count = get_pig_slot_count(user)
-    if slot_count >= 2:
+    if slot_count >= get_max_pig_slots(user):
         return None
-    if Pig.query.filter_by(user_id=user.id, is_alive=True).count() == 0:
+    active_count = Pig.query.filter_by(user_id=user.id, is_alive=True).count()
+    if active_count == 0:
         return REPLACEMENT_PIG_COST
-    return SECOND_PIG_COST
+    return SECOND_PIG_COST + max(0, active_count - 1) * 15.0
+
+def get_feeding_cost_multiplier(user):
+    active_count = Pig.query.filter_by(user_id=user.id, is_alive=True).count()
+    if active_count <= 1:
+        return 1.0
+    return round(1.0 + ((active_count - 1) * FEEDING_PRESSURE_PER_PIG), 2)
+
+def get_lineage_label(pig):
+    return pig.lineage_name or pig.name
+
+def get_pig_heritage_value(pig):
+    wins = pig.races_won or 0
+    level = pig.level or 1
+    rarity_bonus = {'commun': 0.0, 'rare': 0.5, 'epique': 1.0, 'legendaire': 2.0}.get(pig.rarity or 'commun', 0.0)
+    return round((wins * 0.6) + max(0, level - 1) * 0.08 + (pig.lineage_boost or 0.0) + rarity_bonus, 2)
+
+def can_retire_into_heritage(pig):
+    return bool(pig and pig.is_alive and not pig.retired_into_heritage and ((pig.races_won or 0) >= RETIREMENT_HERITAGE_MIN_WINS or (pig.rarity == 'legendaire')))
+
+def retire_pig_into_heritage(user, pig):
+    if not can_retire_into_heritage(pig):
+        return 0.0
+    bonus = max(1.0, round(get_pig_heritage_value(pig) * 0.35, 2))
+    user.barn_heritage_bonus = round((user.barn_heritage_bonus or 0.0) + bonus, 2)
+    pig.retired_into_heritage = True
+    pig.lineage_boost = round((pig.lineage_boost or 0.0) + bonus, 2)
+    lineage_name = get_lineage_label(pig)
+    related_pigs = Pig.query.filter(
+        Pig.user_id == user.id,
+        Pig.is_alive == True,
+        Pig.id != pig.id,
+        Pig.lineage_name == lineage_name,
+    ).all()
+    for descendant in related_pigs:
+        descendant.lineage_boost = round((descendant.lineage_boost or 0.0) + bonus, 2)
+        descendant.moral = min(100, (descendant.moral or 0.0) + min(4.0, bonus * 0.4))
+    retire_pig_old_age(pig, commit=False)
+    pig.death_cause = 'retraite_honoree'
+    pig.epitaph = f"{pig.name} entre au haras des legends. Sa lignee inspire toute la porcherie (+{bonus:.1f} heritage)."
+    db.session.commit()
+    return bonus
+
+def create_offspring(user, parent_a, parent_b, name=None):
+    lineage_name = parent_a.lineage_name or parent_b.lineage_name or f"Maison {user.username}"
+    barn_bonus = user.barn_heritage_bonus or 0.0
+    child = Pig(
+        user_id=user.id,
+        name=(name or f"Porcelet {lineage_name}")[:80],
+        emoji=random.choice(PIG_EMOJIS),
+        rarity=parent_a.rarity if parent_a.rarity == parent_b.rarity else random.choice([parent_a.rarity, parent_b.rarity, 'commun']),
+        origin_country=random.choice([parent_a.origin_country, parent_b.origin_country]),
+        origin_flag=random.choice([parent_a.origin_flag, parent_b.origin_flag]),
+        lineage_name=lineage_name,
+        generation=max(parent_a.generation or 1, parent_b.generation or 1) + 1,
+        sire_id=parent_a.id,
+        dam_id=parent_b.id,
+        lineage_boost=round(((parent_a.lineage_boost or 0.0) + (parent_b.lineage_boost or 0.0)) * 0.35 + (barn_bonus * 0.25), 2),
+    )
+    for stat in ['vitesse', 'endurance', 'agilite', 'force', 'intelligence', 'moral']:
+        base = (getattr(parent_a, stat, 10.0) + getattr(parent_b, stat, 10.0)) / 2
+        inherited = base * 0.82 + random.uniform(-2.5, 2.5) + child.lineage_boost
+        setattr(child, stat, round(min(100, max(8, inherited)), 1))
+    child.energy = 78
+    child.hunger = 70
+    child.happiness = min(100, round(72 + (barn_bonus * 0.4), 1))
+    child.weight_kg = generate_weight_kg_for_profile(child, level=child.level)
+    return child
 
 def get_market_unlock_progress(user):
     total_races = sum(p.races_entered for p in Pig.query.filter_by(user_id=user.id).all())
@@ -837,12 +909,15 @@ def get_user_active_pigs(user):
         if Pig.query.filter_by(user_id=user.id).count() > 0:
             return []
         origin = random.choice(PIG_ORIGINS)
+        origin_country = origin['country']
+        origin_flag = origin['flag']
         pig = Pig(
             user_id=user.id,
             name=f"Cochon de {user.username}",
             emoji='🐷',
-            origin_country=origin['country'],
-            origin_flag=origin['flag']
+            origin_country=origin_country,
+            origin_flag=origin_flag,
+            lineage_name=f"Maison {user.username}",
         )
         apply_origin_bonus(pig, origin)
         pig.weight_kg = generate_weight_kg_for_profile(pig)

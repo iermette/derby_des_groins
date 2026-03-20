@@ -136,9 +136,15 @@ Le marché génère automatiquement des cochons aux enchères avec 4 niveaux de 
 - L'ancien enchérisseur est **automatiquement remboursé**
 - Acheter un nouveau cochon **envoie l'ancien à l'abattoir**
 
-### ⏳ Durée de vie
+### ⏳ Durée de vie, lignée et héritage
 
 Chaque cochon a une **durée de vie limitée** en nombre de courses. Quand il atteint sa limite, il prend sa retraite et est transformé en **charcuterie premium** (Jambon Grand Cru, Pata Negra d'Exception...).
+
+Le jeu gère désormais une couche **reproduction / lignée / héritage** :
+- deux cochons actifs peuvent financer une **portée** pour faire naître un porcelet ;
+- le porcelet hérite partiellement des stats, de l'origine et du bonus de lignée de ses parents ;
+- un cochon légendaire ou déjà couvert de victoires peut prendre une **retraite d'honneur** et injecter un bonus permanent dans sa lignée et dans la porcherie du joueur ;
+- plus la porcherie grandit, plus le **nourrissage devient coûteux** pour éviter l'empilement sans contrepartie.
 
 ### 💀 Le côté sombre
 

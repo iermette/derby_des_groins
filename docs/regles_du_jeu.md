@@ -51,6 +51,9 @@ Entraînez-le régulièrement, envoyez-le à l'école porcine et nourrissez-le p
 
 ## 5. Survivre sur le Long Terme
 - Un cochon finit par prendre sa retraite ou mourir : il faut donc penser à renouveler son élevage.
+- Deux cochons actifs peuvent maintenant lancer une **portee** : le porcelet hérite d'une partie des stats, de l'origine, de la rareté et du bonus de lignée de ses parents.
+- Un cochon **legendaire** (ou deja tres victorieux) peut prendre une **retraite d'honneur** : il quitte la piste, mais laisse un bonus permanent a sa lignee et a la porcherie du joueur.
+- Plus vous possedez de cochons, plus le nourrissage devient cher : chaque bouche supplementaire augmente le coût des cereales pour toute la porcherie.
 - Si un cochon mis en vente ne trouve pas preneur, il **revient automatiquement** chez son propriétaire.
 - Si vous êtes ruiné, le jeu peut verser une **prime d'urgence** pour éviter de rester bloqué sans solution.
 - Les nouveaux comptes doivent d'abord faire quelques courses, ou attendre un peu, avant de pouvoir utiliser pleinement le **marché**.

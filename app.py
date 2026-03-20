@@ -75,8 +75,15 @@ def migrate_db():
         ('pig', 'is_injured', 'BOOLEAN DEFAULT 0'),
         ('pig', 'injury_risk', 'FLOAT DEFAULT 10.0'),
         ('pig', 'vet_deadline', 'DATETIME'),
+        ('pig', 'lineage_name', 'VARCHAR(80)'),
+        ('pig', 'generation', 'INTEGER DEFAULT 1'),
+        ('pig', 'lineage_boost', 'FLOAT DEFAULT 0'),
+        ('pig', 'sire_id', 'INTEGER'),
+        ('pig', 'dam_id', 'INTEGER'),
+        ('pig', 'retired_into_heritage', 'BOOLEAN DEFAULT 0'),
         ('user', 'is_admin', 'BOOLEAN DEFAULT 0'),
         ('user', 'last_relief_at', 'DATETIME'),
+        ('user', 'barn_heritage_bonus', 'FLOAT DEFAULT 0'),
         ('auction', 'seller_id', 'INTEGER'),
         ('auction', 'source_pig_id', 'INTEGER'),
         ('auction', 'pig_weight', 'FLOAT DEFAULT 112.0'),
@@ -136,7 +143,8 @@ def seed_users():
             db.session.flush()
             pig = Pig(
                 user_id=user.id, name=u['pig_name'], emoji=u['emoji'],
-                origin_country=origin_data['country'], origin_flag=origin_data['flag']
+                origin_country=origin_data['country'], origin_flag=origin_data['flag'],
+                lineage_name=f"Maison {u['username']}",
             )
             apply_origin_bonus(pig, origin_data)
             pig.weight_kg = generate_weight_kg_for_profile(pig)
@@ -160,6 +168,7 @@ def seed_users():
                 is_injured=True,
                 injury_risk=28.0,
                 vet_deadline=datetime.utcnow() + timedelta(minutes=30),
+                lineage_name=f"Maison {demo_owner.username}",
             )
             apply_origin_bonus(demo_pig, origin_data)
             demo_pig.weight_kg = clamp_pig_weight(118.0)
