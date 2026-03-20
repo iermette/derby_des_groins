@@ -40,6 +40,7 @@ class User(db.Model):
     last_relief_at = db.Column(db.DateTime, nullable=True)
     bets = db.relationship('Bet', backref='user', lazy=True)
     balance_transactions = db.relationship('BalanceTransaction', backref='user', lazy=True)
+    course_plans = db.relationship('CoursePlan', backref='user', lazy=True)
 
 class Pig(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -143,6 +144,19 @@ class BalanceTransaction(db.Model):
     reference_type = db.Column(db.String(30), nullable=True)
     reference_id = db.Column(db.Integer, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+class CoursePlan(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    pig_id = db.Column(db.Integer, db.ForeignKey('pig.id'), nullable=False, index=True)
+    scheduled_at = db.Column(db.DateTime, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    pig = db.relationship('Pig', backref=db.backref('course_plans', lazy=True))
+
+    __table_args__ = (
+        db.UniqueConstraint('pig_id', 'scheduled_at', name='ux_course_plan_pig_slot'),
+    )
 
 class Auction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -416,6 +430,8 @@ MAX_INJURY_RISK = 40.0
 DEFAULT_PIG_WEIGHT_KG = 112.0
 MIN_PIG_WEIGHT_KG = 75.0
 MAX_PIG_WEIGHT_KG = 190.0
+WEEKLY_RACE_QUOTA = 3
+WEEKLY_BACON_TICKETS = 3
 
 BET_TYPES = {
     'win': {
@@ -945,6 +961,331 @@ def get_bet_selection_ids(bet, participants_by_id):
         return [matching_participant.id]
     return []
 
+def get_week_window(anchor_dt):
+    week_start = (anchor_dt - timedelta(days=anchor_dt.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+    return week_start, week_start + timedelta(days=7)
+
+def get_user_weekly_bet_count(user, anchor_dt=None):
+    if not user:
+        return 0
+    anchor_dt = anchor_dt or datetime.now()
+    week_start, week_end = get_week_window(anchor_dt)
+    return Bet.query.filter(
+        Bet.user_id == user.id,
+        Bet.placed_at >= week_start,
+        Bet.placed_at < week_end,
+    ).count()
+
+def count_pig_weekly_course_commitments(pig_id, anchor_dt, exclude_scheduled_at=None):
+    week_start, week_end = get_week_window(anchor_dt)
+    planned_query = CoursePlan.query.filter(
+        CoursePlan.pig_id == pig_id,
+        CoursePlan.scheduled_at >= week_start,
+        CoursePlan.scheduled_at < week_end,
+    )
+    if exclude_scheduled_at is not None:
+        planned_query = planned_query.filter(CoursePlan.scheduled_at != exclude_scheduled_at)
+    planned_count = planned_query.count()
+
+    actual_query = (
+        db.session.query(func.count(Participant.id))
+        .join(Race, Participant.race_id == Race.id)
+        .filter(
+            Participant.pig_id == pig_id,
+            Race.scheduled_at >= week_start,
+            Race.scheduled_at < week_end,
+            Race.status.in_(['open', 'finished']),
+        )
+    )
+    if exclude_scheduled_at is not None:
+        actual_query = actual_query.filter(Race.scheduled_at != exclude_scheduled_at)
+    actual_count = actual_query.scalar() or 0
+    return int(planned_count + actual_count)
+
+def get_course_theme(slot_time):
+    weekday = slot_time.weekday()
+    if weekday == 0:
+        return {
+            'emoji': '🌧️',
+            'name': 'Pataugeoire du Lundi Matin',
+            'tag': 'Variance totale',
+            'description': "Boue epaisse et trajectoires douteuses. Meme un outsider peut voler la vedette.",
+            'accent': 'amber',
+        }
+    if weekday in (1, 3):
+        return {
+            'emoji': '🥓',
+            'name': 'Trot du Jambon',
+            'tag': 'Classique equilibre',
+            'description': "Les courses les plus stables de la semaine. Le bon jour pour jouer propre.",
+            'accent': 'pink',
+        }
+    if weekday == 2:
+        return {
+            'emoji': '📞',
+            'name': "Marathon de la Conf' Call",
+            'tag': 'Endurance',
+            'description': "Distance longue et cardio en feu. Les cochons fragiles s'ecroulent avant la fin.",
+            'accent': 'cyan',
+        }
+    if weekday == 4:
+        return {
+            'emoji': '🔥',
+            'name': 'Grande Finale du Cochon Roti',
+            'tag': 'Prestige',
+            'description': "Le grand derby de la semaine. Les recompenses sont doubles et tout le bureau regarde.",
+            'accent': 'red',
+        }
+    return {
+        'emoji': '🌿',
+        'name': 'Derby des Bauges Calmes',
+        'tag': 'Repos ou event',
+        'description': "Un creneau souple pour les semaines speciales, les tests ou les evenements admin.",
+        'accent': 'emerald',
+    }
+
+def get_upcoming_course_slots(days=30):
+    first_slot = get_next_race_time()
+    return [first_slot + timedelta(days=offset) for offset in range(days)]
+
+def get_race_ready_pigs():
+    fit_pigs = Pig.query.filter(
+        Pig.is_alive == True,
+        Pig.is_injured == False,
+        Pig.energy > 20,
+        Pig.hunger > 20,
+    ).all()
+    for pig in fit_pigs:
+        update_pig_state(pig)
+    fit_pigs = [pig for pig in fit_pigs if not pig.is_injured and pig.energy > 20 and pig.hunger > 20]
+    fit_pigs.sort(key=lambda pig: calculate_pig_power(pig), reverse=True)
+    return fit_pigs
+
+def get_pig_last_race_datetime(pig):
+    if not pig:
+        return None
+    return (
+        db.session.query(func.max(Race.scheduled_at))
+        .join(Participant, Participant.race_id == Race.id)
+        .filter(Participant.pig_id == pig.id, Race.status == 'finished')
+        .scalar()
+    )
+
+def get_pig_dashboard_status(pig):
+    if not pig:
+        return None
+    last_race_at = get_pig_last_race_datetime(pig)
+    reference_dt = last_race_at or pig.created_at or datetime.utcnow()
+    rest_days = max(0, (datetime.now() - reference_dt).days)
+    fatigue_pct = max(0, min(100, int(round(100 - (pig.energy or 0)))))
+    health_base = ((pig.energy or 0) * 0.4) + ((pig.hunger or 0) * 0.25) + ((pig.happiness or 0) * 0.35)
+    if pig.is_injured:
+        health_base -= 35
+    health_pct = max(0, min(100, int(round(health_base))))
+
+    if rest_days >= 5:
+        rest_label = 'Frais comme un Porcelet'
+        rest_note = "Long repos accumule. Excellent signal pour un retour qui claque."
+    elif rest_days >= 2:
+        rest_label = 'Repos utile'
+        rest_note = "Le cochon recharge tranquillement ses batteries avant sa prochaine sortie."
+    else:
+        rest_label = 'Rythme soutenu'
+        rest_note = "Mieux vaut surveiller les enchainements de courses et la fatigue."
+
+    return {
+        'health_pct': health_pct,
+        'fatigue_pct': fatigue_pct,
+        'rest_days': rest_days,
+        'last_race_at': last_race_at,
+        'rest_label': rest_label,
+        'rest_note': rest_note,
+    }
+
+def get_planned_pig_ids_for_slot(scheduled_at):
+    plans = (
+        CoursePlan.query
+        .filter(CoursePlan.scheduled_at == scheduled_at)
+        .order_by(CoursePlan.created_at.asc(), CoursePlan.id.asc())
+        .all()
+    )
+    return [plan.pig_id for plan in plans]
+
+def populate_race_participants(race, respect_course_plans=True, allow_rebuild_if_bets=False, commit=True):
+    if not race or race.status != 'open':
+        return []
+
+    if not allow_rebuild_if_bets and Bet.query.filter_by(race_id=race.id).count() > 0:
+        return Participant.query.filter_by(race_id=race.id).all()
+
+    max_participants = 8
+    fit_pigs = get_race_ready_pigs()
+
+    if respect_course_plans:
+        planned_ids = get_planned_pig_ids_for_slot(race.scheduled_at)
+        if planned_ids:
+            planned_order = {pig_id: index for index, pig_id in enumerate(planned_ids)}
+            fit_pigs.sort(
+                key=lambda pig: (
+                    0 if pig.id in planned_order else 1,
+                    planned_order.get(pig.id, 999),
+                    -calculate_pig_power(pig),
+                )
+            )
+
+    fit_pigs = fit_pigs[:max_participants]
+    Participant.query.filter_by(race_id=race.id).delete(synchronize_session=False)
+    db.session.flush()
+
+    participants_list = []
+    all_powers = []
+    player_powers = []
+
+    for pig in fit_pigs:
+        power = calculate_pig_power(pig)
+        player_powers.append(power)
+        all_powers.append(power)
+        owner = User.query.get(pig.user_id)
+        participant = Participant(
+            race_id=race.id,
+            name=pig.name,
+            emoji=pig.emoji,
+            pig_id=pig.id,
+            owner_name=owner.username if owner else None,
+            odds=0,
+            win_probability=0,
+        )
+        db.session.add(participant)
+        participants_list.append(participant)
+
+    player_names = {pig.name for pig in fit_pigs}
+    available_npcs = [npc for npc in PIGS if npc['name'] not in player_names]
+    npc_count = min(max_participants - len(fit_pigs), len(available_npcs))
+    if npc_count > 0:
+        avg_player_power = sum(player_powers) / len(player_powers) if player_powers else 34.0
+        npc_min_power = max(22.0, avg_player_power * 0.9)
+        npc_max_power = max(npc_min_power + 2.0, avg_player_power * 1.1)
+        for npc in random.sample(available_npcs, npc_count):
+            npc_power = random.uniform(npc_min_power, npc_max_power)
+            all_powers.append(npc_power)
+            participant = Participant(
+                race_id=race.id,
+                name=npc['name'],
+                emoji=npc['emoji'],
+                pig_id=None,
+                owner_name=None,
+                odds=0,
+                win_probability=0,
+            )
+            db.session.add(participant)
+            participants_list.append(participant)
+
+    total_power = sum(all_powers) if all_powers else 1
+    for index, participant in enumerate(participants_list):
+        participant.win_probability = all_powers[index] / total_power
+    db.session.flush()
+    participants_by_id = {participant.id: participant for participant in participants_list}
+    for participant in participants_list:
+        participant.odds = calculate_bet_odds(participants_by_id, [participant.id], 'win')
+
+    if commit:
+        db.session.commit()
+    return participants_list
+
+def build_course_schedule(user, pigs, days=30):
+    now = datetime.now()
+    slots = get_upcoming_course_slots(days)
+    if not slots:
+        return []
+
+    slot_start = slots[0]
+    slot_end = slots[-1] + timedelta(seconds=1)
+
+    races = (
+        Race.query
+        .filter(Race.scheduled_at >= slot_start, Race.scheduled_at < slot_end, Race.status.in_(['open', 'upcoming']))
+        .order_by(Race.scheduled_at.asc())
+        .all()
+    )
+    race_by_slot = {race.scheduled_at: race for race in races}
+
+    participants = []
+    if races:
+        race_ids = [race.id for race in races]
+        participants = Participant.query.filter(Participant.race_id.in_(race_ids)).all()
+    participants_by_race = {}
+    for participant in participants:
+        participants_by_race.setdefault(participant.race_id, []).append(participant)
+
+    plans = (
+        CoursePlan.query
+        .filter(CoursePlan.scheduled_at >= slot_start, CoursePlan.scheduled_at < slot_end)
+        .order_by(CoursePlan.scheduled_at.asc(), CoursePlan.created_at.asc(), CoursePlan.id.asc())
+        .all()
+    )
+    plans_by_slot = {}
+    for plan in plans:
+        plans_by_slot.setdefault(plan.scheduled_at, []).append(plan)
+
+    schedule = []
+    for slot_time in slots:
+        race = race_by_slot.get(slot_time)
+        slot_participants = participants_by_race.get(race.id, []) if race else []
+        slot_participants.sort(key=lambda participant: (participant.odds or 999, participant.name))
+        slot_plan_rows = plans_by_slot.get(slot_time, [])
+        slot_user_plans = [plan for plan in slot_plan_rows if plan.user_id == user.id]
+        slot_user_plan_by_pig = {plan.pig_id: plan for plan in slot_user_plans}
+        slot_actual_pig_ids = {participant.pig_id for participant in slot_participants if participant.pig_id}
+        slot_locked = (slot_time - now).total_seconds() < 30
+        if race and Bet.query.filter_by(race_id=race.id).count() > 0:
+            slot_locked = True
+
+        pig_options = []
+        for pig in pigs:
+            is_actual_participant = pig.id in slot_actual_pig_ids
+            is_planned = pig.id in slot_user_plan_by_pig
+            exclude_slot = slot_time if (is_actual_participant or is_planned) else None
+            weekly_commitments = count_pig_weekly_course_commitments(pig.id, slot_time, exclude_scheduled_at=exclude_slot)
+            quota_reached = weekly_commitments >= WEEKLY_RACE_QUOTA and not (is_actual_participant or is_planned)
+
+            can_toggle = True
+            disabled_reason = None
+            if slot_locked:
+                can_toggle = False
+                disabled_reason = "Course verrouillee"
+            elif race and race.status == 'open' and (pig.is_injured or pig.energy <= 20 or pig.hunger <= 20):
+                can_toggle = False
+                disabled_reason = "Trop faible pour la course ouverte"
+            elif quota_reached:
+                can_toggle = False
+                disabled_reason = "Quota hebdo atteint"
+
+            pig_options.append({
+                'pig': pig,
+                'is_planned': is_planned,
+                'is_actual_participant': is_actual_participant,
+                'can_toggle': can_toggle,
+                'disabled_reason': disabled_reason,
+                'weekly_commitments': weekly_commitments + (0 if (is_actual_participant or is_planned) else 1),
+            })
+
+        schedule.append({
+            'slot': slot_time,
+            'slot_key': slot_time.strftime('%Y-%m-%dT%H:%M:%S'),
+            'day_name': JOURS_FR[slot_time.weekday()],
+            'theme': get_course_theme(slot_time),
+            'race': race,
+            'participants': slot_participants,
+            'planned_count': len(slot_plan_rows),
+            'user_plans': slot_user_plans,
+            'user_plan_names': [plan.pig.name for plan in slot_user_plans if plan.pig],
+            'is_next': slot_time == slots[0],
+            'is_locked': slot_locked,
+            'pig_options': pig_options,
+        })
+
+    return schedule
+
 def refresh_race_betting_lines(race):
     if not race or race.status != 'open':
         return
@@ -1208,66 +1549,14 @@ def ensure_next_race():
         Race.status.in_(['upcoming', 'open'])
     ).first()
     if existing:
+        populate_race_participants(existing, respect_course_plans=True, allow_rebuild_if_bets=False, commit=True)
         refresh_race_betting_lines(existing)
         return existing
 
     race = Race(scheduled_at=next_time, status='open')
     db.session.add(race)
     db.session.flush()
-
-    MAX_PARTICIPANTS = 8
-    participants_list = []
-    all_powers = []
-    player_powers = []
-
-    fit_pigs = Pig.query.filter(Pig.is_alive == True, Pig.is_injured == False, Pig.energy > 20, Pig.hunger > 20).all()
-    for p in fit_pigs:
-        update_pig_state(p)
-    fit_pigs = [p for p in fit_pigs if not p.is_injured and p.energy > 20 and p.hunger > 20]
-    fit_pigs.sort(key=lambda p: calculate_pig_power(p), reverse=True)
-    fit_pigs = fit_pigs[:MAX_PARTICIPANTS]
-
-    for pig in fit_pigs:
-        power = calculate_pig_power(pig)
-        player_powers.append(power)
-        all_powers.append(power)
-        owner = User.query.get(pig.user_id)
-        p = Participant(
-            race_id=race.id, name=pig.name, emoji=pig.emoji,
-            pig_id=pig.id, owner_name=owner.username if owner else None,
-            odds=0, win_probability=0
-        )
-        db.session.add(p)
-        participants_list.append(p)
-
-    npc_count = min(MAX_PARTICIPANTS - len(fit_pigs), len(PIGS))
-    if npc_count > 0:
-        player_names = {pig.name for pig in fit_pigs}
-        available_npcs = [npc for npc in PIGS if npc['name'] not in player_names]
-        selected_npcs = random.sample(available_npcs, min(npc_count, len(available_npcs)))
-        avg_player_power = sum(player_powers) / len(player_powers) if player_powers else 34.0
-        npc_min_power = max(22.0, avg_player_power * 0.9)
-        npc_max_power = max(npc_min_power + 2.0, avg_player_power * 1.1)
-        for npc in selected_npcs:
-            npc_power = random.uniform(npc_min_power, npc_max_power)
-            all_powers.append(npc_power)
-            p = Participant(
-                race_id=race.id, name=npc['name'], emoji=npc['emoji'],
-                pig_id=None, owner_name=None, odds=0, win_probability=0
-            )
-            db.session.add(p)
-            participants_list.append(p)
-
-    total_power = sum(all_powers) if all_powers else 1
-    for i, p in enumerate(participants_list):
-        prob = all_powers[i] / total_power
-        p.win_probability = prob
-    db.session.flush()
-    participants_by_id = {participant.id: participant for participant in participants_list}
-    for participant in participants_list:
-        participant.odds = calculate_bet_odds(participants_by_id, [participant.id], 'win')
-
-    db.session.commit()
+    populate_race_participants(race, respect_course_plans=True, allow_rebuild_if_bets=False, commit=True)
     return race
 
 def run_race_if_needed():
@@ -1451,24 +1740,221 @@ def get_race_history_entries():
 
 JOURS_FR = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
 
+@app.route('/courses')
+def courses():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user = User.query.get(session['user_id'])
+    if not user:
+        session.pop('user_id', None)
+        return redirect(url_for('login'))
+
+    ensure_next_race()
+    pigs = get_user_active_pigs(user)
+
+    pigs_data = []
+    for pig in pigs:
+        update_pig_state(pig)
+        pigs_data.append({
+            'pig': pig,
+            'power': round(calculate_pig_power(pig), 1),
+            'weekly_commitments': count_pig_weekly_course_commitments(pig.id, datetime.now()),
+            'weight_profile': get_weight_profile(pig),
+        })
+
+    schedule = build_course_schedule(user, pigs, days=30)
+    next_week_slots = schedule[:7]
+
+    return render_template(
+        'courses.html',
+        user=user,
+        pigs_data=pigs_data,
+        next_week_slots=next_week_slots,
+        month_slots=schedule,
+        weekly_quota=WEEKLY_RACE_QUOTA,
+        now=datetime.now(),
+    )
+
+@app.route('/courses/plan', methods=['POST'])
+def plan_course():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user = User.query.get(session['user_id'])
+    if not user:
+        session.pop('user_id', None)
+        return redirect(url_for('login'))
+
+    pig_id = request.form.get('pig_id', type=int)
+    scheduled_at_raw = (request.form.get('scheduled_at') or '').strip()
+    pig = Pig.query.filter_by(id=pig_id, user_id=user.id, is_alive=True).first()
+    if not pig:
+        flash("Cochon introuvable pour cette planification.", "error")
+        return redirect(url_for('courses'))
+
+    try:
+        scheduled_at = datetime.fromisoformat(scheduled_at_raw).replace(microsecond=0)
+    except ValueError:
+        flash("Creneau de course invalide.", "error")
+        return redirect(url_for('courses'))
+
+    if scheduled_at <= datetime.now() + timedelta(seconds=30):
+        flash("Cette course est trop proche pour modifier les inscriptions.", "warning")
+        return redirect(url_for('courses'))
+
+    open_race = Race.query.filter_by(scheduled_at=scheduled_at, status='open').first()
+    if open_race and Bet.query.filter_by(race_id=open_race.id).count() > 0:
+        flash("Cette course est deja verrouillee par des paris. Plus de modification possible.", "warning")
+        return redirect(url_for('courses'))
+    if open_race and (pig.is_injured or pig.energy <= 20 or pig.hunger <= 20):
+        flash(f"{pig.name} n'est pas en etat de rejoindre la course ouverte du moment.", "warning")
+        return redirect(url_for('courses'))
+
+    already_participant = False
+    if open_race:
+        already_participant = Participant.query.filter_by(race_id=open_race.id, pig_id=pig.id).first() is not None
+
+    existing_plan = CoursePlan.query.filter_by(user_id=user.id, pig_id=pig.id, scheduled_at=scheduled_at).first()
+    if existing_plan:
+        db.session.delete(existing_plan)
+        if open_race:
+            populate_race_participants(open_race, respect_course_plans=True, allow_rebuild_if_bets=False, commit=False)
+        db.session.commit()
+        flash(f"📅 {pig.name} est retire du planning du {scheduled_at.strftime('%d/%m %H:%M')}.", "success")
+        return redirect(url_for('courses'))
+
+    if already_participant:
+        flash(f"{pig.name} est deja partant sur cette course ouverte.", "warning")
+        return redirect(url_for('courses'))
+
+    if count_pig_weekly_course_commitments(pig.id, scheduled_at) >= WEEKLY_RACE_QUOTA:
+        flash(f"{pig.name} a deja atteint son quota hebdomadaire de {WEEKLY_RACE_QUOTA} courses.", "warning")
+        return redirect(url_for('courses'))
+
+    db.session.add(CoursePlan(user_id=user.id, pig_id=pig.id, scheduled_at=scheduled_at))
+    db.session.flush()
+
+    if open_race:
+        populate_race_participants(open_race, respect_course_plans=True, allow_rebuild_if_bets=False, commit=False)
+
+    db.session.commit()
+    flash(f"📅 {pig.name} est maintenant planifie pour la course du {scheduled_at.strftime('%d/%m %H:%M')}.", "success")
+    return redirect(url_for('courses'))
+
 @app.route('/')
 def index():
+    ensure_next_race()
     next_race = Race.query.filter(Race.status == 'open').order_by(Race.scheduled_at).first()
     recent_races = Race.query.filter_by(status='finished').order_by(Race.finished_at.desc()).limit(5).all()
 
     user = None
     user_bets = []
     pigs = []
+    pigs_data = []
+    week_slots = []
+    featured_pig = None
+    featured_pig_status = None
+    headline_status = None
+    bacon_tickets_remaining = WEEKLY_BACON_TICKETS
+    latest_race = recent_races[0] if recent_races else None
+    latest_race_participants = []
+    news_items = []
     if 'user_id' in session:
         user = User.query.get(session['user_id'])
         if user:
             pigs = Pig.query.filter_by(user_id=user.id, is_alive=True).all()
+            for pig in pigs:
+                update_pig_state(pig)
+            pigs_data = [{
+                'pig': pig,
+                'power': round(calculate_pig_power(pig), 1),
+                'weight_profile': get_weight_profile(pig),
+                'dashboard': get_pig_dashboard_status(pig),
+            } for pig in pigs]
+            week_slots = build_course_schedule(user, pigs, days=7)
+            weekly_bet_count = get_user_weekly_bet_count(user, datetime.now())
+            bacon_tickets_remaining = max(0, WEEKLY_BACON_TICKETS - weekly_bet_count)
             if next_race:
                 user_bets = Bet.query.filter_by(user_id=user.id, race_id=next_race.id).all()
 
     participants = []
     if next_race:
         participants = Participant.query.filter_by(race_id=next_race.id).order_by(Participant.odds).all()
+    participants_by_pig_id = {participant.pig_id: participant for participant in participants if participant.pig_id}
+
+    if latest_race:
+        latest_race_participants = Participant.query.filter_by(race_id=latest_race.id).order_by(Participant.finish_position).all()
+
+    if pigs_data:
+        featured_candidates = [entry for entry in pigs_data if entry['pig'].id in participants_by_pig_id]
+        featured_pig = (featured_candidates[0] if featured_candidates else pigs_data[0])
+        featured_pig_status = featured_pig['dashboard']
+        featured_pig_obj = featured_pig['pig']
+        participant = participants_by_pig_id.get(featured_pig_obj.id)
+        if participant:
+            headline_status = {
+                'participates': True,
+                'label': f"{featured_pig_obj.emoji} {featured_pig_obj.name} y participe !",
+                'subtext': f"Cote actuelle x{participant.odds:.1f}. {featured_pig_status['rest_label']}.",
+                'tone': 'success',
+            }
+        else:
+            next_plan = (
+                CoursePlan.query
+                .filter(CoursePlan.user_id == user.id, CoursePlan.pig_id == featured_pig_obj.id, CoursePlan.scheduled_at >= datetime.now())
+                .order_by(CoursePlan.scheduled_at.asc())
+                .first()
+            )
+            if next_plan:
+                plan_label = next_plan.scheduled_at.strftime('%d/%m %H:%M')
+                headline_status = {
+                    'participates': False,
+                    'label': f"📅 {featured_pig_obj.name} vise le {plan_label}",
+                    'subtext': featured_pig_status['rest_note'],
+                    'tone': 'planned',
+                }
+            else:
+                headline_status = {
+                    'participates': False,
+                    'label': f"💤 {featured_pig_obj.name} se repose",
+                    'subtext': featured_pig_status['rest_note'],
+                    'tone': 'rest',
+                }
+
+    injured_pig = Pig.query.filter_by(is_alive=True, is_injured=True).order_by(Pig.vet_deadline.asc(), Pig.id.asc()).first()
+    if injured_pig:
+        owner_name = injured_pig.owner.username if injured_pig.owner else "Un eleveur"
+        news_items.append({
+            'emoji': '🏥',
+            'title': f"{injured_pig.name} s'est blesse",
+            'text': f"{owner_name} doit l'envoyer au veto avant la deadline.",
+        })
+
+    latest_big_win = (
+        BalanceTransaction.query
+        .filter(BalanceTransaction.reason_code.in_(['bet_payout', 'challenge_payout']))
+        .order_by(BalanceTransaction.created_at.desc(), BalanceTransaction.id.desc())
+        .first()
+    )
+    if latest_big_win and latest_big_win.user:
+        news_items.append({
+            'emoji': '🎟️',
+            'title': f"{latest_big_win.user.username} a touche gros",
+            'text': f"{latest_big_win.reason_label}: {latest_big_win.amount:.0f} BG.",
+        })
+
+    if latest_race and latest_race_participants:
+        winner = latest_race_participants[0]
+        winner_owner = winner.owner_name or 'Ordinateur'
+        news_items.append({
+            'emoji': '🏆',
+            'title': f"{winner.name} a gagne la derniere course",
+            'text': f"Victoire signee {winner_owner} sur la course #{latest_race.id}.",
+        })
+
+    week_race_cards = week_slots[:5] if week_slots else []
+    next_race_theme = get_course_theme(next_race.scheduled_at) if next_race else None
 
     prix_groin = get_prix_moyen_groin()
 
@@ -1479,7 +1965,17 @@ def index():
         bet_types=BET_TYPES,
         prix_groin=prix_groin,
         market_open=is_market_open(),
-        next_market=get_next_market_time()
+        next_market=get_next_market_time(),
+        featured_pig=featured_pig,
+        featured_pig_status=featured_pig_status,
+        headline_status=headline_status,
+        bacon_tickets_remaining=bacon_tickets_remaining,
+        weekly_bacon_tickets=WEEKLY_BACON_TICKETS,
+        week_race_cards=week_race_cards,
+        next_race_theme=next_race_theme,
+        latest_race=latest_race,
+        latest_race_participants=latest_race_participants,
+        news_items=news_items[:3],
     )
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -1630,6 +2126,10 @@ def place_bet():
     if not user:
         session.pop('user_id', None)
         return redirect(url_for('login'))
+    weekly_bet_count = get_user_weekly_bet_count(user, datetime.now())
+    if weekly_bet_count >= WEEKLY_BACON_TICKETS:
+        flash(f"Tu as deja utilise tes {WEEKLY_BACON_TICKETS} Tickets Bacon de la semaine.", "warning")
+        return redirect(url_for('index'))
 
     race_id = request.form.get('race_id', type=int)
     bet_type = normalize_bet_type(request.form.get('bet_type', 'win'))
@@ -2341,54 +2841,7 @@ def admin_force_race():
     race = Race(scheduled_at=datetime.now(), status='open')
     db.session.add(race)
     db.session.flush()
-
-    MAX_PARTICIPANTS = 8
-    participants_list = []
-    all_powers = []
-    player_powers = []
-
-    fit_pigs = Pig.query.filter(Pig.is_alive == True, Pig.is_injured == False, Pig.energy > 20, Pig.hunger > 20).all()
-    for p in fit_pigs:
-        update_pig_state(p)
-    fit_pigs = [p for p in fit_pigs if not p.is_injured and p.energy > 20 and p.hunger > 20]
-    fit_pigs.sort(key=lambda p: calculate_pig_power(p), reverse=True)
-    fit_pigs = fit_pigs[:MAX_PARTICIPANTS]
-
-    for pig in fit_pigs:
-        power = calculate_pig_power(pig)
-        player_powers.append(power)
-        all_powers.append(power)
-        owner = User.query.get(pig.user_id)
-        p = Participant(race_id=race.id, name=pig.name, emoji=pig.emoji,
-                        pig_id=pig.id, owner_name=owner.username if owner else None,
-                        odds=0, win_probability=0)
-        db.session.add(p)
-        participants_list.append(p)
-
-    player_names = {pig.name for pig in fit_pigs}
-    available_npcs = [npc for npc in PIGS if npc['name'] not in player_names]
-    npc_count = min(MAX_PARTICIPANTS - len(fit_pigs), len(available_npcs))
-    avg_player_power = sum(player_powers) / len(player_powers) if player_powers else 34.0
-    npc_min_power = max(22.0, avg_player_power * 0.9)
-    npc_max_power = max(npc_min_power + 2.0, avg_player_power * 1.1)
-    for npc in random.sample(available_npcs, npc_count):
-        npc_power = random.uniform(npc_min_power, npc_max_power)
-        all_powers.append(npc_power)
-        p = Participant(race_id=race.id, name=npc['name'], emoji=npc['emoji'],
-                        pig_id=None, owner_name=None, odds=0, win_probability=0)
-        db.session.add(p)
-        participants_list.append(p)
-
-    total_power = sum(all_powers) if all_powers else 1
-    for i, p in enumerate(participants_list):
-        prob = all_powers[i] / total_power
-        p.win_probability = prob
-    db.session.flush()
-    participants_by_id = {participant.id: participant for participant in participants_list}
-    for participant in participants_list:
-        participant.odds = calculate_bet_odds(participants_by_id, [participant.id], 'win')
-
-    db.session.commit()
+    populate_race_participants(race, respect_course_plans=False, allow_rebuild_if_bets=True, commit=True)
     run_race_if_needed()
     flash("🏁 Course forcée ! Résultats disponibles.", "success")
     return redirect(url_for('admin'))

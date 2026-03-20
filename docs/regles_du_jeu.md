@@ -5,6 +5,7 @@ Bienvenue dans l'univers impitoyable et délicieux du **Derby des Groins**. Voic
 ## 1. Débuter l'Aventure
 - Créez votre compte, vous recevrez **100 BitGroins (BG)** en cadeau de bienvenue.
 - Rendez-vous sur la page **Mon Cochon** pour adopter votre premier poulain gratuitement. Votre cochon recevra un nom, un pays d'origine (avec un bonus de stats), un emoji représentatif, et des statistiques générées aléatoirement.
+- La page d'accueil fait office de **dashboard express** : on y voit la course du jour, le statut de son cochon, ses Tickets Bacon restants, un résumé de la bauge et les derniers résultats.
 
 ## 2. Les Statistiques de votre Cochon
 - **Vitesse (VIT)** : Détermine sa foulée.
@@ -32,12 +33,14 @@ Entraînez-le régulièrement, envoyez-le à l'école porcine et nourrissez-le p
 ## 3. Les Courses
 - Il y a des courses régulières prévues à heure fixe ou forçables manuellement par l'admin.
 - Le calendrier continue de vivre meme sans visiteur connecte : les courses partent via une tache de fond.
+- La page **Courses** permet de voir la semaine / le mois a venir et de planifier ses cochons sur les prochains creneaux.
 - Chaque cochon inscrit court (y compris les PNJ), sauf s'il est blessé ou dans un état trop faible pour être retenu.
 - Le moteur de course tient compte de la puissance generale, de l'etat du cochon et de son **poids de forme**.
 - Les éleveurs reçoivent une **prime de participation**, et les meilleurs gagnent un **bonus de podium**.
 
 ## 4. Les Paris
 - Placez vos BitGroins sur les cochons participants (même ceux des autres joueurs !).
+- Chaque joueur reçoit **3 Tickets Bacon par semaine** : il faut donc choisir ses tickets avec soin.
 - **Un seul ticket par course** est autorisé pour éviter les arbitrages faciles.
 - Trois formats sont disponibles :
 - **Simple gagnant** : trouver le 1er.

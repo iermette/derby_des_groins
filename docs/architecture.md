@@ -23,8 +23,10 @@
 - **Entraînement** : les séances consomment des ressources, améliorent des compétences ciblées et peuvent faire varier le poids.
 - **École porcine** : des quiz tactiques accordent XP et bonus de stats, avec un cooldown indépendant par cochon.
 - **Blessures et vétérinaire** : les cochons blessés sont bloqués hors des activités risquées jusqu'au puzzle de soin ou à l'expiration du timer.
+- **Dashboard d'accueil** : la home agrège la prochaine course, l'état du cochon vedette, les Tickets Bacon hebdo, les courses à venir et un fil d'actualité compact.
 - **Courses automatiques** : les cochons aptes sont inscrits, la puissance moyenne sert à calculer probabilités et cotes, puis un facteur de **poids de forme** affine les chances réelles et le risque de blessure.
-- **Garde-fous économiques** : un seul ticket par course, cotes avec marge maison, tickets simples / ordonnes, prime d'urgence, mises a jour atomiques du solde et retour automatique des cochons invendus.
+- **Calendrier des courses** : une vue dediee permet de voir les prochains creneaux, de planifier ses cochons et d'appliquer un quota hebdomadaire.
+- **Garde-fous économiques** : 3 Tickets Bacon par semaine, un seul ticket par course, cotes avec marge maison, tickets simples / ordonnes, prime d'urgence, mises a jour atomiques du solde et retour automatique des cochons invendus.
 - **Profil joueur** : une vue dédiée permet de suivre ses indicateurs et de changer son mot de passe.
 - **Historique / tracabilite** : une page rassemble l'historique complet des courses et un journal BitGroins par utilisateur, avec vue globale pour l'admin.
 - **Marché** : enchères limitées dans le temps avec résolution automatique.
@@ -49,8 +51,9 @@ derby_des_groins/
     ├── admin.html          # Paramétrage global
     ├── auth.html           # Inscription/Connexion
     ├── cimetiere.html      # Le panthéon des cochons légendaires
+    ├── courses.html        # Calendrier des courses et planification
     ├── history.html        # Historique complet : courses, paris et journal BitGroins
-    ├── index.html          # Accueil et affichage des courses
+    ├── index.html          # Dashboard d'accueil et guichet des paris
     ├── legendes_pop.html   # Les stars de la Pop Culture
     ├── marche.html         # Le marché aux enchères (Market open/close)
     ├── profil.html         # Profil joueur, statistiques et changement de mot de passe
@@ -61,7 +64,8 @@ derby_des_groins/
 \`\`\`
 
 ## Routes importantes
-- `/` : accueil, courses ouvertes et paris.
+- `/` : dashboard d'accueil, prochaine course, recap du cochon et prise de paris.
+- `/courses` : calendrier des courses et planification des cochons.
 - `/mon-cochon` : gestion des cochons vivants.
 - `/profil` : vue compte joueur et changement de mot de passe.
 - `/history` : historique complet des courses, tickets et mouvements BitGroins.
