@@ -1,26 +1,37 @@
 # 🐷 Derby des Groins - Architecture du Projet
 
 ## Technologies Utilisées
-- **Backend**: Python 3.x, Flask (Framework web)
-- **Base de données**: SQLite avec SQLAlchemy (via Flask-SQLAlchemy)
-- **Frontend**: HTML5, Jinja2 (Moteur de templates), Tailwind CSS (via CDN)
-- **Tâches asynchrones**: `threading` (pour le fonctionnement en arrière-plan des courses automatiques)
+- **Backend**: Python 3.x, Flask
+- **Base de données**: SQLite avec SQLAlchemy via Flask-SQLAlchemy
+- **Frontend**: HTML5, Jinja2, Tailwind CSS (CDN), Chart.js
+- **Fonctionnement temps réel léger**: endpoints JSON pour le countdown, les résultats et l'état du cochon
 
 ## Structure des Modèles (Database Schema)
-1. **Model `Config`** : Stocke la configuration de l'application (Heure des courses, horaire du marché, etc.).
-2. **Model `User`** : Système de comptes (Pseudo, Mot de passe hashé, Solde en BitGroins `BG`, statut administrateur).
-3. **Model `Pig`** : L'entité principale. Chaque cochon a un niveau, nom, emoji, stats (vitesse, endurance, etc.), propriétaire. Gère aussi l'historique de ses courses et le statut (vivant, aux enchères, abattoir).
-4. **Model `Race`** : Les événements de courses, heure de lancement et résultats.
-5. **Model `RaceParticipant`** : La liaison entre un cochon et une course avec position finale.
-6. **Model `Bet`** : Les paris des utilisateurs sur un participant à une course, avec une cote et un statut gagné/perdu.
-7. **Model `Auction`** : Le marché des enchères, contenant le prix de départ, l'enchère actuelle, et les IDs des vendeurs/acheteurs.
+1. **Model `GameConfig`** : stocke la configuration de l'application (heure des courses, horaire du marché, durée d'ouverture).
+2. **Model `User`** : comptes utilisateurs, mot de passe hashé, solde en BitGroins `BG`, statut administrateur.
+3. **Model `Pig`** : cœur du jeu. Contient les stats, l'état tamagotchi, la progression, la rareté, l'origine, la mortalité, le challenge de la mort et le suivi de l'**École porcine**.
+4. **Model `Race`** : événements de course, planification et résultat final.
+5. **Model `Participant`** : participants d'une course, qu'ils soient issus d'un joueur ou d'un PNJ.
+6. **Model `Bet`** : paris des utilisateurs sur une course, avec cote, statut et gains.
+7. **Model `Auction`** : marché des enchères pour les cochons, avec vendeur, acheteur et état de la vente.
+
+## Mécaniques principales
+- **Tamagotchi porcin** : faim, énergie, bonheur et progression évoluent dans le temps.
+- **Nutrition** : chaque céréale coûte des BG et modifie la satiété, l'énergie et certaines stats.
+- **Entraînement** : les séances consomment des ressources et améliorent des compétences ciblées.
+- **École porcine** : des quiz tactiques accordent XP et bonus de stats, avec un cooldown indépendant par cochon.
+- **Courses automatiques** : les cochons aptes sont inscrits, la puissance moyenne sert à calculer probabilités et cotes.
+- **Marché** : enchères limitées dans le temps avec résolution automatique.
+- **Mort / retraite / abattoir** : les cochons ont une durée de vie et peuvent finir en charcuterie mémorable.
 
 ## Arborescence du Projet
 \`\`\`
 derby_des_groins/
 ├── app.py                  # Logique backend, routes Flask, modèles BDD
-├── config.json             # Fichier généré ou géré par Flask(session secret)
-├── derby.db                # Base de données SQLite générée
+├── README.md               # Vue d'ensemble du projet
+├── requirements.txt        # Dépendances Python
+├── instance/
+│   └── derby.db            # Base SQLite générée au lancement
 ├── docs/                   # Documentation du projet
 │   ├── architecture.md     # Technique et structure
 │   └── regles_du_jeu.md    # Comment jouer
@@ -33,8 +44,17 @@ derby_des_groins/
     ├── index.html          # Accueil et affichage des courses
     ├── legendes_pop.html   # Les stars de la Pop Culture
     ├── marche.html         # Le marché aux enchères (Market open/close)
-    └── mon_cochon.html     # Tableau de bord individuel du cochon
+    ├── classement.html     # Classement des joueurs
+    └── mon_cochon.html     # Tableau de bord individuel du cochon, entraînement et école
 \`\`\`
+
+## Routes importantes
+- `/` : accueil, courses ouvertes et paris.
+- `/mon-cochon` : gestion des cochons vivants.
+- `/feed` et `/train` : actions tamagotchi principales.
+- `/school` : soumission d'un quiz de l'école porcine.
+- `/marche` et `/bid` : visualisation et enchères du marché.
+- `/api/countdown`, `/api/latest_result`, `/api/pig` : endpoints JSON pour l'UI.
 
 ## Choix de Design
 La direction artistique est basée sur le **"dark mode" amusant** avec des dégradés intenses (rouge, jaune, violet), des polices sympathiques (Lilita One, Nunito) et l'utilisation omniprésente de l'emoji 🐷 pour donner un aspect léger et addictif.

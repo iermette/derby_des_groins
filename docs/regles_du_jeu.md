@@ -14,7 +14,13 @@ Bienvenue dans l'univers impitoyable et délicieux du **Derby des Groins**. Voic
 - **Intelligence (INT)** : Choisir la meilleure trajectoire.
 - **Moral (MOR)** : Détermination à gagner.
 
-Entraînez-le régulièrement et nourrissez-le pour le maintenir en forme avant les courses ! (Mais attention, un cochon ne peut courir qu'un nombre défini de fois avant de succomber...).
+Entraînez-le régulièrement, envoyez-le à l'école porcine et nourrissez-le pour le maintenir en forme avant les courses ! (Mais attention, un cochon ne peut courir qu'un nombre défini de fois avant de succomber...).
+
+## 2.b L'École Porcine
+- Depuis la page **Mon Cochon**, chaque cochon peut suivre des **cours tactiques** sous forme de quiz.
+- Une bonne réponse apporte des **bonus de statistiques** et de l'**XP**.
+- Une mauvaise réponse ne bloque pas la progression, mais coûte du moral général.
+- Chaque cochon doit ensuite respecter un **temps de récupération** avant de retourner en classe.
 
 ## 3. Les Courses
 - Il y a des courses régulières prévues à heure fixe ou forçables manuellement par l'admin.

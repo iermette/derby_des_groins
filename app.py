@@ -54,6 +54,7 @@ class Pig(db.Model):
     level = db.Column(db.Integer, default=1)
     races_won = db.Column(db.Integer, default=0)
     races_entered = db.Column(db.Integer, default=0)
+    school_sessions_completed = db.Column(db.Integer, default=0)
 
     # Durée de vie & Rareté & Origine
     max_races = db.Column(db.Integer, default=80)
@@ -75,6 +76,7 @@ class Pig(db.Model):
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_updated = db.Column(db.DateTime, default=datetime.utcnow)
+    last_school_at = db.Column(db.DateTime, nullable=True)
 
     owner = db.relationship('User', backref=db.backref('pigs', lazy=True))
 
@@ -259,6 +261,100 @@ TRAININGS = {
     }
 }
 
+SCHOOL_COOLDOWN_MINUTES = 30
+
+SCHOOL_LESSONS = {
+    'strategie': {
+        'name': 'Strategie de Virage',
+        'emoji': '📐',
+        'description': 'Apprendre a lire la piste et garder sa relance au bon moment.',
+        'question': 'Dans un virage serre, quelle est la meilleure approche ?',
+        'answers': [
+            {'text': 'Ralentir legerement puis accelerer en sortie', 'correct': True, 'feedback': 'Bonne lecture. La sortie de virage fait gagner plus de terrain que l entree heroique.'},
+            {'text': 'Foncer tout droit et compter sur la chance', 'correct': False, 'feedback': 'La chance ne tient pas la corde tres longtemps.'},
+            {'text': 'S arreter pour observer les autres', 'correct': False, 'feedback': 'Observer c est bien, planter ses sabots au milieu de la piste un peu moins.'},
+            {'text': 'Suivre le plus bruyant du groupe', 'correct': False, 'feedback': 'Le vacarme n est pas une tactique de course.'},
+        ],
+        'stats': {'intelligence': 2.5, 'agilite': 1.5},
+        'xp': 24,
+        'wrong_xp': 6,
+        'energy_cost': 10,
+        'hunger_cost': 4,
+        'min_happiness': 15,
+        'happiness_bonus': 5,
+        'wrong_happiness_penalty': 6,
+    },
+    'nutrition': {
+        'name': 'Nutrition du Champion',
+        'emoji': '🥗',
+        'description': 'Comprendre quand manger pour tenir jusqu au sprint final.',
+        'question': 'Quel repas prepare le mieux un cochon juste avant la course ?',
+        'answers': [
+            {'text': 'Un repas equilibre et facile a digerer', 'correct': True, 'feedback': 'Exact. Du carburant utile, pas un festival du bidou.'},
+            {'text': 'Une fondue XXL servie tres chaude', 'correct': False, 'feedback': 'Excellente idee pour une sieste, beaucoup moins pour un depart.'},
+            {'text': 'Aucun repas pour courir leger', 'correct': False, 'feedback': 'Leger, oui. Debout au depart, beaucoup moins sur.'},
+            {'text': 'Trois desserts et un soda surprise', 'correct': False, 'feedback': 'Ton cochon applaudit, son endurance beaucoup moins.'},
+        ],
+        'stats': {'endurance': 2.0, 'moral': 1.0},
+        'xp': 22,
+        'wrong_xp': 5,
+        'energy_cost': 8,
+        'hunger_cost': 3,
+        'min_happiness': 10,
+        'happiness_bonus': 4,
+        'wrong_happiness_penalty': 5,
+    },
+    'mental': {
+        'name': 'Mental d Acier',
+        'emoji': '🧠',
+        'description': 'Gerer la pression, la foule et les petits cochons qui fanfaronnent.',
+        'question': 'Comment garder son sang-froid juste avant le depart ?',
+        'answers': [
+            {'text': 'Respirer, se concentrer et ignorer la provoc', 'correct': True, 'feedback': 'Parfait. Le calme fait plus de degats que les cris.'},
+            {'text': 'Repondre a toutes les moqueries', 'correct': False, 'feedback': 'Ton cochon gagne peut-etre une dispute, pas une course.'},
+            {'text': 'Dormir sur la ligne de depart', 'correct': False, 'feedback': 'Repos mal place. Ambiance sieste, resultat desastreux.'},
+            {'text': 'Paniquer tres fort tres tot', 'correct': False, 'feedback': 'Technique peu recommandee par l academie porcine.'},
+        ],
+        'stats': {'moral': 2.0, 'intelligence': 1.5},
+        'xp': 26,
+        'wrong_xp': 6,
+        'energy_cost': 9,
+        'hunger_cost': 3,
+        'min_happiness': 20,
+        'happiness_bonus': 6,
+        'wrong_happiness_penalty': 4,
+    },
+    'video': {
+        'name': 'Analyse Video',
+        'emoji': '🎥',
+        'description': 'Revision des departs fulgurants et des depassements bien sentis.',
+        'question': 'Quel detail faut-il surveiller sur une rediffusion de course ?',
+        'answers': [
+            {'text': 'Le timing des accelerations et les ouvertures dans le trafic', 'correct': True, 'feedback': 'Exact. Les details repetes font les champions reguliers.'},
+            {'text': 'La couleur des bottes du soigneur', 'correct': False, 'feedback': 'Elegant, mais pas franchement decisif sur 400 metres.'},
+            {'text': 'Le nombre de spectateurs au premier rang', 'correct': False, 'feedback': 'Flatteur pour l ego, inutile pour la trajectoire.'},
+            {'text': 'La meilleure pose pour la photo d arrivee', 'correct': False, 'feedback': 'D abord la course, ensuite la couverture de magazine.'},
+        ],
+        'stats': {'vitesse': 1.5, 'agilite': 1.5, 'intelligence': 1.0},
+        'xp': 24,
+        'wrong_xp': 6,
+        'energy_cost': 11,
+        'hunger_cost': 4,
+        'min_happiness': 15,
+        'happiness_bonus': 5,
+        'wrong_happiness_penalty': 5,
+    },
+}
+
+STAT_LABELS = {
+    'vitesse': 'VIT',
+    'endurance': 'END',
+    'agilite': 'AGI',
+    'force': 'FOR',
+    'intelligence': 'INT',
+    'moral': 'MOR',
+}
+
 CHARCUTERIE = [
     {'name': 'Jambon', 'emoji': '🍖', 'msg': 'Un beau jambon fumé au bois de hêtre'},
     {'name': 'Saucisson sec', 'emoji': '🌭', 'msg': 'Tranché finement, un régal à l\'apéro'},
@@ -393,6 +489,21 @@ def update_pig_state(pig):
         pig.happiness = min(60, pig.happiness + hours * 0.3)
     pig.last_updated = now
     db.session.commit()
+
+def get_cooldown_remaining(last_action, minutes):
+    if not last_action:
+        return 0
+    elapsed = (datetime.utcnow() - last_action).total_seconds()
+    return max(0, int(minutes * 60 - elapsed))
+
+def format_duration_short(total_seconds):
+    total_seconds = max(0, int(total_seconds))
+    minutes, seconds = divmod(total_seconds, 60)
+    if minutes and seconds:
+        return f"{minutes}m {seconds:02d}s"
+    if minutes:
+        return f"{minutes}m"
+    return f"{seconds}s"
 
 def get_user_active_pigs(user):
     """Retourne la liste des cochons vivants de l'utilisateur. En crée un si aucun."""
@@ -867,18 +978,22 @@ def mon_cochon():
         races_remaining = max(0, (p.max_races or 80) - p.races_entered)
         age_days = (datetime.utcnow() - p.created_at).days if p.created_at else 0
         rarity_info = RARITIES.get(p.rarity or 'commun', RARITIES['commun'])
+        school_cooldown = get_cooldown_remaining(p.last_school_at, SCHOOL_COOLDOWN_MINUTES)
         pigs_data.append({
             'pig': p,
             'races_remaining': races_remaining,
             'age_days': age_days,
             'rarity_info': rarity_info,
             'power': round(calculate_pig_power(p), 1),
-            'xp_next': xp_for_level(p.level + 1)
+            'xp_next': xp_for_level(p.level + 1),
+            'school_cooldown': school_cooldown,
+            'school_cooldown_label': format_duration_short(school_cooldown),
         })
 
     return render_template('mon_cochon.html',
         user=user, pigs_data=pigs_data, cereals=CEREALS, trainings=TRAININGS,
-        pig_emojis=PIG_EMOJIS
+        school_lessons=SCHOOL_LESSONS, school_cooldown_minutes=SCHOOL_COOLDOWN_MINUTES,
+        pig_emojis=PIG_EMOJIS, stat_labels=STAT_LABELS
     )
 
 @app.route('/adopt-second-pig')
@@ -983,6 +1098,72 @@ def train():
     pig.last_updated = datetime.utcnow()
     db.session.commit()
     flash(f"{training['emoji']} {training['name']} terminé !", "success")
+    return redirect(url_for('mon_cochon'))
+
+@app.route('/school', methods=['POST'])
+def school():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    user = User.query.get(session['user_id'])
+    pig_id = request.form.get('pig_id', type=int)
+    pig = Pig.query.get(pig_id)
+    if not pig or pig.user_id != user.id or not pig.is_alive:
+        flash("Cochon introuvable !", "error")
+        return redirect(url_for('mon_cochon'))
+
+    update_pig_state(pig)
+    lesson_key = request.form.get('lesson')
+    if lesson_key not in SCHOOL_LESSONS:
+        flash("Cours introuvable !", "error")
+        return redirect(url_for('mon_cochon'))
+
+    lesson = SCHOOL_LESSONS[lesson_key]
+    cooldown = get_cooldown_remaining(pig.last_school_at, SCHOOL_COOLDOWN_MINUTES)
+    if cooldown > 0:
+        flash(f"La salle de classe est fermee pour l'instant. Reviens dans {format_duration_short(cooldown)}.", "warning")
+        return redirect(url_for('mon_cochon'))
+
+    answer_idx = request.form.get('answer_idx', type=int)
+    answers = lesson['answers']
+    if answer_idx is None or answer_idx < 0 or answer_idx >= len(answers):
+        flash("Reponse invalide !", "error")
+        return redirect(url_for('mon_cochon'))
+
+    if pig.energy < lesson['energy_cost']:
+        flash("Ton cochon est trop fatigue pour suivre ce cours.", "error")
+        return redirect(url_for('mon_cochon'))
+    if pig.hunger < lesson['hunger_cost']:
+        flash("Ton cochon a trop faim pour se concentrer.", "error")
+        return redirect(url_for('mon_cochon'))
+    if pig.happiness < lesson['min_happiness']:
+        flash("Ton cochon boude l'ecole aujourd'hui. Remonte-lui le moral d'abord.", "warning")
+        return redirect(url_for('mon_cochon'))
+
+    selected_answer = answers[answer_idx]
+    pig.energy = max(0, pig.energy - lesson['energy_cost'])
+    pig.hunger = max(0, pig.hunger - lesson['hunger_cost'])
+    pig.last_school_at = datetime.utcnow()
+    pig.school_sessions_completed = (pig.school_sessions_completed or 0) + 1
+
+    if selected_answer['correct']:
+        for stat, boost in lesson['stats'].items():
+            current = getattr(pig, stat, None)
+            if current is not None:
+                setattr(pig, stat, min(100, current + boost))
+        pig.xp += lesson['xp']
+        pig.happiness = min(100, pig.happiness + lesson.get('happiness_bonus', 0))
+        feedback_prefix = "Cours valide avec mention groin-tres-bien."
+        category = "success"
+    else:
+        pig.xp += lesson.get('wrong_xp', 0)
+        pig.happiness = max(0, pig.happiness - lesson.get('wrong_happiness_penalty', 0))
+        feedback_prefix = "Le cours etait plus complique que prevu."
+        category = "warning"
+
+    pig.last_updated = datetime.utcnow()
+    check_level_up(pig)
+    db.session.commit()
+    flash(f"{lesson['emoji']} {lesson['name']} - {feedback_prefix} {selected_answer['feedback']}", category)
     return redirect(url_for('mon_cochon'))
 
 @app.route('/rename-pig', methods=['POST'])
@@ -1427,7 +1608,9 @@ def api_pig():
         'happiness': round(pig.happiness, 1),
         'power': round(calculate_pig_power(pig), 1),
         'origin': pig.origin_country, 'origin_flag': pig.origin_flag,
-        'races_entered': pig.races_entered, 'races_won': pig.races_won
+        'races_entered': pig.races_entered, 'races_won': pig.races_won,
+        'school_sessions_completed': pig.school_sessions_completed or 0,
+        'school_cooldown': get_cooldown_remaining(pig.last_school_at, SCHOOL_COOLDOWN_MINUTES)
     })
 
 @app.route('/api/prix-groin')
@@ -1451,6 +1634,8 @@ def migrate_db():
         ('pig', 'rarity', 'VARCHAR(20) DEFAULT "commun"'),
         ('pig', 'origin_country', 'VARCHAR(30) DEFAULT "France"'),
         ('pig', 'origin_flag', 'VARCHAR(10) DEFAULT "🇫🇷"'),
+        ('pig', 'last_school_at', 'DATETIME'),
+        ('pig', 'school_sessions_completed', 'INTEGER DEFAULT 0'),
         ('user', 'is_admin', 'BOOLEAN DEFAULT 0'),
         ('auction', 'seller_id', 'INTEGER'),
         ('auction', 'source_pig_id', 'INTEGER'),

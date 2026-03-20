@@ -70,6 +70,7 @@ Chaque joueur possède un **cochon virtuel** qu'il doit développer comme un Tam
 
 - **Nourrir** avec des céréales (Orge, Blé, Seigle, Triticale, Avoine, Maïs) — chaque aliment booste des compétences différentes
 - **Entraîner** (Sprint, Cross-country, Obstacles, Sparring, Puzzles, Repos)
+- **Envoyer à l'École porcine** pour répondre à des quiz tactiques et gagner des bonus de stats + XP
 - **Faire courir** automatiquement toutes les heures contre les cochons des autres joueurs et des PNJ
 - **Parier** sur les courses avec des Groins-Coins (GC)
 - **Oser le Challenge de la Mort** — mise x3 si top 3, mais dernier = abattoir 🔪
@@ -181,7 +182,7 @@ derby_des_groins/
     ├── index.html           # Dashboard — courses & paris
     ├── auth.html            # Inscription / Connexion
     ├── history.html         # Historique des paris
-    ├── mon_cochon.html      # Tamagotchi — stats, nourrir, entraîner, radar chart
+    ├── mon_cochon.html      # Tamagotchi — stats, nourrir, entraîner, école porcine, radar chart
     ├── marche.html          # Marché aux Cochons — enchères
     ├── abattoir.html        # L'Abattoir — vitrine de charcuterie
     └── cimetiere.html       # Cimetière des Légendes — tombes des héros
@@ -199,11 +200,12 @@ derby_des_groins/
 1. Les courses ont lieu **toutes les heures pile** (14h00, 15h00...)
 2. Les cochons des joueurs sont **automatiquement inscrits** si énergie > 20% et satiété > 20%
 3. Les **stats du cochon influencent** ses chances de victoire
-4. Les paris ferment **30 secondes** avant le départ
-5. Après la course : **XP** selon le classement (1er: 100xp, 2e: 60xp, 3e: 40xp...)
-6. Le vainqueur reçoit des **bonus de stats**
-7. La faim diminue avec le temps — **nourris ton cochon** ou il ne pourra plus courir
-8. L'énergie se régénère naturellement (si bien nourri)
+4. L'**École porcine** propose des quiz tactiques avec coût en énergie/satiété, gain de stats/XP et cooldown par cochon
+5. Les paris ferment **30 secondes** avant le départ
+6. Après la course : **XP** selon le classement (1er: 100xp, 2e: 60xp, 3e: 40xp...)
+7. Le vainqueur reçoit des **bonus de stats**
+8. La faim diminue avec le temps — **nourris ton cochon** ou il ne pourra plus courir
+9. L'énergie se régénère naturellement (si bien nourri)
 
 ---
 
