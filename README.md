@@ -142,15 +142,12 @@ cd derby_des_groins
 pip install -r requirements.txt
 ```
 
-### 3. Lancer
-```bash
-python app.py
-```
+### 3. Lancer l'application : `python app.py`
+4. Accès local : `http://127.0.0.1:5000`
 
-### 4. Ouvrir
-```
-http://localhost:5000
-```
+**🔑 Accès test :**
+- Les comptes par défaut (Christophe, Simon, etc.) utilisent le mot de passe : `mdp1234`
+- Le compte `Christophe` dispose des droits administrateur.
 
 La base de données SQLite est créée automatiquement au premier lancement avec 6 utilisateurs pré-configurés.
 
