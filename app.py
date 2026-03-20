@@ -29,6 +29,7 @@ class User(db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     bets = db.relationship('Bet', backref='user', lazy=True)
+    pigs = db.relationship('Pig', backref='owner', lazy=True)
 
 class Pig(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -394,9 +395,10 @@ def update_pig_state(pig):
     pig.last_updated = now
     db.session.commit()
 
-def get_or_create_pig(user):
-    pig = Pig.query.filter_by(user_id=user.id, is_alive=True).first()
-    if not pig:
+def get_user_active_pigs(user):
+    """Retourne la liste des cochons vivants de l'utilisateur. En crée un si aucun."""
+    pigs = Pig.query.filter_by(user_id=user.id, is_alive=True).all()
+    if not pigs:
         origin = random.choice(PIG_ORIGINS)
         pig = Pig(
             user_id=user.id,
@@ -409,7 +411,8 @@ def get_or_create_pig(user):
         setattr(pig, origin['bonus_stat'], getattr(pig, origin['bonus_stat']) + origin['bonus'])
         db.session.add(pig)
         db.session.commit()
-    return pig
+        return [pig]
+    return pigs
 
 def send_to_abattoir(pig, cause='abattoir'):
     charcuterie = random.choice(CHARCUTERIE)
@@ -539,9 +542,11 @@ def resolve_auctions():
             auction.status = 'sold'
             winner = User.query.get(auction.bidder_id)
             if winner:
-                current_pig = Pig.query.filter_by(user_id=winner.id, is_alive=True).first()
-                if current_pig:
-                    send_to_abattoir(current_pig, cause='sacrifice')
+                active_pigs = Pig.query.filter_by(user_id=winner.id, is_alive=True).order_by(Pig.id).all()
+                if len(active_pigs) >= 2:
+                    # Sacrifier le plus ancien pour respecter la limite de 2
+                    send_to_abattoir(active_pigs[0], cause='sacrifice')
+                
                 origin_data = next((o for o in PIG_ORIGINS if o['country'] == auction.pig_origin), PIG_ORIGINS[0])
                 new_pig = Pig(
                     user_id=winner.id, name=auction.pig_name, emoji=auction.pig_emoji,
@@ -743,11 +748,11 @@ def index():
 
     user = None
     user_bets = []
-    pig = None
+    pigs = []
     if 'user_id' in session:
         user = User.query.get(session['user_id'])
         if user:
-            pig = get_or_create_pig(user)
+            pigs = Pig.query.filter_by(user_id=user.id, is_alive=True).all()
             if next_race:
                 user_bets = Bet.query.filter_by(user_id=user.id, race_id=next_race.id).all()
 
@@ -758,7 +763,7 @@ def index():
     prix_groin = get_prix_moyen_groin()
 
     return render_template('index.html',
-        user=user, pig=pig, next_race=next_race,
+        user=user, pigs=pigs, next_race=next_race,
         participants=participants, recent_races=recent_races,
         user_bets=user_bets, now=datetime.now(),
         prix_groin=prix_groin,
@@ -854,26 +859,72 @@ def mon_cochon():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user = User.query.get(session['user_id'])
-    pig = get_or_create_pig(user)
-    update_pig_state(pig)
-    races_remaining = max(0, (pig.max_races or 80) - pig.races_entered)
-    age_days = (datetime.utcnow() - pig.created_at).days if pig.created_at else 0
-    rarity_info = RARITIES.get(pig.rarity or 'commun', RARITIES['commun'])
+    pigs = get_user_active_pigs(user)
+    
+    # Préparer les données pour chaque cochon
+    pigs_data = []
+    for p in pigs:
+        update_pig_state(p)
+        races_remaining = max(0, (p.max_races or 80) - p.races_entered)
+        age_days = (datetime.utcnow() - p.created_at).days if p.created_at else 0
+        rarity_info = RARITIES.get(p.rarity or 'commun', RARITIES['commun'])
+        pigs_data.append({
+            'pig': p,
+            'races_remaining': races_remaining,
+            'age_days': age_days,
+            'rarity_info': rarity_info,
+            'power': round(calculate_pig_power(p), 1),
+            'xp_next': xp_for_level(p.level + 1)
+        })
+
     return render_template('mon_cochon.html',
-        user=user, pig=pig, cereals=CEREALS, trainings=TRAININGS,
-        xp_next=xp_for_level(pig.level + 1),
-        pig_power=round(calculate_pig_power(pig), 1),
-        pig_emojis=PIG_EMOJIS,
-        races_remaining=races_remaining, age_days=age_days,
-        rarity_info=rarity_info
+        user=user, pigs_data=pigs_data, cereals=CEREALS, trainings=TRAININGS,
+        pig_emojis=PIG_EMOJIS
     )
+
+@app.route('/adopt-second-pig')
+def adopt_second_pig():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    user = User.query.get(session['user_id'])
+    active_pigs = Pig.query.filter_by(user_id=user.id, is_alive=True).all()
+    if len(active_pigs) >= 2:
+        flash("Tu as déjà le maximum de cochons (2) !", "warning")
+        return redirect(url_for('mon_cochon'))
+    
+    # Adopter un deuxième cochon coûte 50 BG par exemple (ou gratuit ?)
+    # On va dire 30 BG pour le second
+    cost = 30.0
+    if user.balance < cost:
+        flash(f"Il te faut {cost:.0f} BG pour adopter un second cochon !", "error")
+        return redirect(url_for('mon_cochon'))
+    
+    user.balance = round(user.balance - cost, 2)
+    origin = random.choice(PIG_ORIGINS)
+    new_pig = Pig(
+        user_id=user.id,
+        name=f"Second de {user.username}",
+        emoji='🐖',
+        origin_country=origin['country'],
+        origin_flag=origin['flag']
+    )
+    setattr(new_pig, origin['bonus_stat'], getattr(new_pig, origin['bonus_stat']) + origin['bonus'])
+    db.session.add(new_pig)
+    db.session.commit()
+    flash("✨ Nouveau cochon adopté ! Bienvenue dans l'écurie.", "success")
+    return redirect(url_for('mon_cochon'))
 
 @app.route('/feed', methods=['POST'])
 def feed():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user = User.query.get(session['user_id'])
-    pig = get_or_create_pig(user)
+    pig_id = request.form.get('pig_id', type=int)
+    pig = Pig.query.get(pig_id)
+    if not pig or pig.user_id != user.id or not pig.is_alive:
+        flash("Cochon introuvable !", "error")
+        return redirect(url_for('mon_cochon'))
+    
     update_pig_state(pig)
     cereal_key = request.form.get('cereal')
     if cereal_key not in CEREALS:
@@ -902,7 +953,12 @@ def train():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user = User.query.get(session['user_id'])
-    pig = get_or_create_pig(user)
+    pig_id = request.form.get('pig_id', type=int)
+    pig = Pig.query.get(pig_id)
+    if not pig or pig.user_id != user.id or not pig.is_alive:
+        flash("Cochon introuvable !", "error")
+        return redirect(url_for('mon_cochon'))
+    
     update_pig_state(pig)
     training_key = request.form.get('training')
     if training_key not in TRAININGS:
@@ -935,7 +991,11 @@ def rename_pig():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user = User.query.get(session['user_id'])
-    pig = get_or_create_pig(user)
+    pig_id = request.form.get('pig_id', type=int)
+    pig = Pig.query.get(pig_id)
+    if not pig or pig.user_id != user.id or not pig.is_alive:
+        flash("Cochon introuvable !", "error")
+        return redirect(url_for('mon_cochon'))
     new_name = request.form.get('name', '').strip()
     new_emoji = request.form.get('emoji', '').strip()
     if new_name and 2 <= len(new_name) <= 30:
@@ -950,7 +1010,13 @@ def challenge_mort():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user = User.query.get(session['user_id'])
-    pig = get_or_create_pig(user)
+    pig_id = request.form.get('pig_id', type=int)
+    pig = Pig.query.get(pig_id)
+    if not pig or pig.user_id != user.id or not pig.is_alive:
+        flash("Cochon introuvable !", "error")
+        return redirect(url_for('mon_cochon'))
+    
+    update_pig_state(pig)
     wager = request.form.get('wager', type=float)
     if not wager or wager < 10:
         flash("Mise minimum : 10 BG pour le Challenge de la Mort !", "error")
@@ -959,7 +1025,7 @@ def challenge_mort():
         flash("T'as pas les moyens de jouer avec la vie de ton cochon !", "error")
         return redirect(url_for('mon_cochon'))
     if pig.challenge_mort_wager > 0:
-        flash("Un Challenge de la Mort est déjà en cours !", "warning")
+        flash("Tu es déjà inscrit au Challenge de la Mort !", "warning")
         return redirect(url_for('mon_cochon'))
     if pig.energy <= 20 or pig.hunger <= 20:
         flash("Ton cochon est trop faible pour le Challenge !", "error")
@@ -967,7 +1033,7 @@ def challenge_mort():
     user.balance = round(user.balance - wager, 2)
     pig.challenge_mort_wager = wager
     db.session.commit()
-    flash(f"🔪 CHALLENGE DE LA MORT ACTIVÉ ! Mise : {wager:.0f} BG", "warning")
+    flash(f"💀 {pig.name} inscrit au Challenge de la Mort ({wager:.0f} BG) ! Bonne chance...", "success")
     return redirect(url_for('mon_cochon'))
 
 @app.route('/cancel-challenge', methods=['POST'])
@@ -975,14 +1041,34 @@ def cancel_challenge():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user = User.query.get(session['user_id'])
-    pig = get_or_create_pig(user)
+    pig_id = request.form.get('pig_id', type=int)
+    pig = Pig.query.get(pig_id)
+    if not pig or pig.user_id != user.id or not pig.is_alive:
+        flash("Cochon introuvable !", "error")
+        return redirect(url_for('mon_cochon'))
+    
     if pig.challenge_mort_wager <= 0:
         return redirect(url_for('mon_cochon'))
     refund = round(pig.challenge_mort_wager * 0.5, 2)
     user.balance = round(user.balance + refund, 2)
     pig.challenge_mort_wager = 0
     db.session.commit()
-    flash(f"😰 Challenge annulé... Remboursement : {refund:.0f} BG (50%)", "warning")
+    flash(f"😰 Challenge annulé pour {pig.name}... Remboursement : {refund:.0f} BG (50%)", "warning")
+    return redirect(url_for('mon_cochon'))
+
+@app.route('/sacrifice-pig', methods=['POST'])
+def sacrifice_pig():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    user = User.query.get(session['user_id'])
+    pig_id = request.form.get('pig_id', type=int)
+    pig = Pig.query.get(pig_id)
+    if not pig or pig.user_id != user.id or not pig.is_alive:
+        flash("Cochon introuvable !", "error")
+        return redirect(url_for('mon_cochon'))
+    
+    send_to_abattoir(pig, cause='sacrifice_volontaire')
+    flash(f"🔪 {pig.name} a été envoyé à l'abattoir volontairement. Paix à ses côtelettes.", "warning")
     return redirect(url_for('mon_cochon'))
 
 # ─── ROUTES MARCHÉ ──────────────────────────────────────────────────────────
@@ -995,11 +1081,12 @@ def marche():
     recent_sold = Auction.query.filter_by(status='sold').order_by(Auction.ends_at.desc()).limit(5).all()
 
     user = None
-    pig = None
+    pigs = [] # Initialize pigs list
     if 'user_id' in session:
         user = User.query.get(session['user_id'])
         if user:
-            pig = Pig.query.filter_by(user_id=user.id, is_alive=True).first()
+            # Get all active pigs for the user to potentially sell
+            pigs = Pig.query.filter_by(user_id=user.id, is_alive=True).all()
 
     market_open = is_market_open()
     next_market = get_next_market_time()
@@ -1008,7 +1095,7 @@ def marche():
     prix_groin = get_prix_moyen_groin()
 
     return render_template('marche.html',
-        user=user, pig=pig,
+        user=user, pigs=pigs, # Pass all pigs for the user
         auctions=active_auctions, recent_sold=recent_sold,
         rarities=RARITIES, now=datetime.utcnow(),
         market_open=market_open, next_market=next_market,
@@ -1057,9 +1144,10 @@ def sell_pig():
         flash("Le marché est fermé ! Reviens le jour du marché.", "error")
         return redirect(url_for('marche'))
     user = User.query.get(session['user_id'])
-    pig = Pig.query.filter_by(user_id=user.id, is_alive=True).first()
+    pig_id = request.form.get('pig_id', type=int)
+    pig = Pig.query.filter_by(id=pig_id, user_id=user.id, is_alive=True).first()
     if not pig:
-        flash("Tu n'as pas de cochon à vendre !", "error")
+        flash("Tu n'as pas ce cochon ou il n'est plus disponible !", "error")
         return redirect(url_for('marche'))
     starting_price = request.form.get('price', type=float)
     if not starting_price or starting_price < 5:

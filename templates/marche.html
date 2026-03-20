@@ -196,41 +196,49 @@
     </div>
 
     <!-- VENDRE SON COCHON -->
-    {% if user and pig and market_open %}
+    {% if user and pigs and market_open %}
     <div class="card p-6 mb-8 border-yellow-900/30">
-        <h2 class="font-title text-xl text-white mb-3">🏷️ Vendre ton cochon</h2>
-        <div class="flex items-center gap-4 mb-4">
-            <span class="text-4xl">{{ pig.emoji }}</span>
-            <div>
-                <p class="text-white font-bold">{{ pig.name }}</p>
-                <p class="text-white/40 text-xs font-semibold">
-                    {{ pig.origin_flag }} {{ pig.origin_country }} —
-                    Niv. {{ pig.level }} — Puissance :
-                    {{ "%.0f"|format((pig.vitesse + pig.endurance + pig.agilite + pig.force + pig.intelligence + pig.moral) / 6) }}
-                </p>
-                <div class="flex gap-1 mt-1 flex-wrap">
-                    <span class="stat-mini bg-blue-500/20 text-blue-300">VIT {{ "%.0f"|format(pig.vitesse) }}</span>
-                    <span class="stat-mini bg-green-500/20 text-green-300">END {{ "%.0f"|format(pig.endurance) }}</span>
-                    <span class="stat-mini bg-yellow-500/20 text-yellow-300">AGI {{ "%.0f"|format(pig.agilite) }}</span>
-                    <span class="stat-mini bg-red-500/20 text-red-300">FOR {{ "%.0f"|format(pig.force) }}</span>
-                    <span class="stat-mini bg-purple-500/20 text-purple-300">INT {{ "%.0f"|format(pig.intelligence) }}</span>
-                    <span class="stat-mini bg-pink-500/20 text-pink-300">MOR {{ "%.0f"|format(pig.moral) }}</span>
+        <h2 class="font-title text-xl text-white mb-4">🏷️ Vendre un cochon</h2>
+        
+        <div class="space-y-6">
+            {% for pig in pigs %}
+            <div class="p-4 rounded-2xl bg-white/5 border border-white/10">
+                <div class="flex items-center gap-4 mb-4">
+                    <span class="text-4xl">{{ pig.emoji }}</span>
+                    <div>
+                        <p class="text-white font-bold">{{ pig.name }}</p>
+                        <p class="text-white/40 text-xs font-semibold">
+                            {{ pig.origin_flag }} {{ pig.origin_country }} —
+                            Niv. {{ pig.level }} — Puissance :
+                            {{ "%.0f"|format((pig.vitesse + pig.endurance + pig.agilite + pig.force + pig.intelligence + pig.moral) / 6) }}
+                        </p>
+                        <div class="flex gap-1 mt-1 flex-wrap text-[10px]">
+                            <span class="stat-mini px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300">VIT {{ "%.0f"|format(pig.vitesse) }}</span>
+                            <span class="stat-mini px-1.5 py-0.5 rounded bg-green-500/20 text-green-300">END {{ "%.0f"|format(pig.endurance) }}</span>
+                            <span class="stat-mini px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-300">AGI {{ "%.0f"|format(pig.agilite) }}</span>
+                            <span class="stat-mini px-1.5 py-0.5 rounded bg-red-500/20 text-red-300">FOR {{ "%.0f"|format(pig.force) }}</span>
+                            <span class="stat-mini px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300">INT {{ "%.0f"|format(pig.intelligence) }}</span>
+                            <span class="stat-mini px-1.5 py-0.5 rounded bg-pink-500/20 text-pink-300">MOR {{ "%.0f"|format(pig.moral) }}</span>
+                        </div>
+                    </div>
                 </div>
+                <form method="POST" action="/sell-pig" class="flex gap-3 items-end">
+                    <input type="hidden" name="pig_id" value="{{ pig.id }}">
+                    <div class="flex-1">
+                        <label class="text-white/60 text-xs font-bold block mb-1">Prix de départ (min 5 BG)</label>
+                        <input type="number" name="price" min="5" step="1" placeholder="Ex: 30"
+                               class="w-full bg-black/30 border border-yellow-900/30 rounded-xl px-4 py-2 text-white font-bold text-sm focus:outline-none focus:border-yellow-400">
+                    </div>
+                    <button type="submit" class="btn-sell px-6 py-2 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded-xl transition-all"
+                            onclick="return confirm('⚠️ {{ pig.name }} sera mis en vente !\nSi quelqu\'un l\'achète, tu recevras les BG.\nSinon, il sera perdu...\n\nContinuer ?');">
+                        Mettre en vente
+                    </button>
+                </form>
             </div>
+            {% endfor %}
         </div>
-        <form method="POST" action="/sell-pig" class="flex gap-3 items-end">
-            <div class="flex-1">
-                <label class="text-white/60 text-xs font-bold block mb-1">Prix de départ (min 5 BG)</label>
-                <input type="number" name="price" min="5" step="1" placeholder="Ex: 30"
-                       class="w-full bg-white/5 border border-yellow-900/30 rounded-xl px-4 py-2.5 text-white font-bold text-sm focus:outline-none focus:border-yellow-400">
-            </div>
-            <button type="submit" class="btn-sell"
-                    onclick="return confirm('⚠️ Ton cochon sera mis en vente !\nSi quelqu\'un l\'achète, tu recevras les BG.\nSinon, il sera perdu...\n\nContinuer ?');">
-                🏷️ Mettre en vente
-            </button>
-        </form>
     </div>
-    {% elif user and pig and not market_open %}
+    {% elif user and pigs and not market_open %}
     <div class="card p-5 mb-8 text-center border-yellow-900/20">
         <p class="text-white/40 text-sm font-bold">🔒 La vente de cochons n'est possible que quand le marché est ouvert.</p>
     </div>
