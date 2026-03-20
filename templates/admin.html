@@ -300,6 +300,83 @@
         </div>
     </div>
 
+    <!-- COURSES À VENIR ET ÉVÉNEMENTS -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- PROCHAINES COURSES -->
+        <div class="card p-6">
+            <h2 class="font-title text-2xl text-white mb-4">📅 Courses à venir</h2>
+            <div class="space-y-3 max-h-96 overflow-y-auto pr-1">
+                {% if upcoming_races %}
+                    {% for race in upcoming_races %}
+                    <div class="user-row p-3 flex items-center justify-between">
+                        <div>
+                            <p class="text-white font-bold text-sm">
+                                Course #{{ race.id }} 
+                                <span class="ml-2 {% if race.status == 'open' %}text-green-400{% else %}text-yellow-400{% endif %} text-[10px] border border-current px-1 rounded">
+                                    {{ race.status | upper }}
+                                </span>
+                            </p>
+                            <p class="text-white/40 text-xs font-semibold">
+                                {{ race.scheduled_at.strftime('%d/%m à %H:%M') }}
+                                · {{ race.participants | length }} partants
+                                · {{ race.bets | length }} paris
+                            </p>
+                        </div>
+                        <form method="POST" action="/admin/races/{{ race.id }}/cancel" onsubmit="return confirm('Annuler cette course et rembourser les paris ?');">
+                            <button type="submit" class="text-red-400 hover:text-red-300 text-xs font-bold uppercase transition-colors">
+                                🗑️ Annuler
+                            </button>
+                        </form>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-white/20 text-sm italic py-4">Aucune course à venir.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ÉVÉNEMENTS -->
+        <div class="card p-6">
+            <h2 class="font-title text-2xl text-white mb-4">🎭 Événements mondiaux</h2>
+            <p class="text-white/40 text-sm font-semibold mb-6">Déclenche des actions affectant tous les joueurs ou groins.</p>
+
+            <div class="grid grid-cols-1 gap-4">
+                <form method="POST" action="/admin/events/trigger">
+                    <input type="hidden" name="event_type" value="food_drop">
+                    <button type="submit" class="btn-admin w-full text-left flex items-center gap-3">
+                        <span class="text-xl">📦</span>
+                        <div>
+                            <p class="text-sm">Parachutage de Vivres</p>
+                            <p class="text-[10px] opacity-70 normal-case">+30 Énergie & Faim pour TOUT le monde</p>
+                        </div>
+                    </button>
+                </form>
+
+                <form method="POST" action="/admin/events/trigger">
+                    <input type="hidden" name="event_type" value="vet_visit">
+                    <button type="submit" class="btn-admin w-full text-left flex items-center gap-3" style="background: linear-gradient(135deg, #10b981, #059669);">
+                        <span class="text-xl">🏥</span>
+                        <div>
+                            <p class="text-sm">Passage du Vétérinaire</p>
+                            <p class="text-[10px] opacity-70 normal-case">Soigne IMMEDIATEMENT tous les groins blessés</p>
+                        </div>
+                    </button>
+                </form>
+
+                <form method="POST" action="/admin/events/trigger">
+                    <input type="hidden" name="event_type" value="bonus_bg">
+                    <button type="submit" class="btn-admin w-full text-left flex items-center gap-3" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+                        <span class="text-xl">💰</span>
+                        <div>
+                            <p class="text-sm">Prime Exceptionnelle</p>
+                            <p class="text-[10px] opacity-70 normal-case">Offre 50 BitGroins à tous les dresseurs</p>
+                        </div>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- COURSES RÉCENTES -->
     {% if recent_races %}
     <div class="card p-6">

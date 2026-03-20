@@ -22,11 +22,12 @@ def admin():
 
     users = User.query.order_by(User.username.asc()).all()
     pigs = Pig.query.order_by(Pig.is_alive.desc(), Pig.name.asc()).all()
+    upcoming_races = Race.query.filter(Race.status.in_(['upcoming', 'open'])).order_by(Race.scheduled_at).limit(20).all()
     next_race = Race.query.filter(Race.status == 'open').order_by(Race.scheduled_at).first()
     recent_races = Race.query.filter_by(status='finished').order_by(Race.finished_at.desc()).limit(10).all()
 
     return render_template('admin.html',
-        user=user, users=users, pigs=pigs,
+        user=user, users=users, pigs=pigs, upcoming_races=upcoming_races,
         next_race=next_race, recent_races=recent_races,
         config={
             'race_hour': get_config('race_hour', '14'),
@@ -101,4 +102,66 @@ def admin_toggle_pig_life(pig_id):
         pig.death_cause = pig.death_cause or 'admin'
     db.session.commit()
     flash(f"Statut mis à jour pour {pig.name}.", 'success')
+    return redirect(url_for('admin.admin'))
+
+
+@admin_bp.route('/admin/races/<int:race_id>/cancel', methods=['POST'])
+def admin_cancel_race(race_id):
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login', next=request.path))
+    user = User.query.get(session['user_id'])
+    if not user or not user.is_admin:
+        return redirect(url_for('main.index'))
+
+    race = Race.query.get_or_404(race_id)
+    if race.status == 'finished':
+        flash("Impossible d'annuler une course terminée.", "error")
+        return redirect(url_for('admin.admin'))
+
+    # Refund bets if any
+    for bet in race.bets:
+        if bet.status == 'pending':
+            from helpers import credit_user_balance
+            credit_user_balance(bet.user_id, bet.amount, reason_code='bet_refund', reason_label='Remboursement (Course annulée)', reference_type='race', reference_id=race.id)
+            bet.status = 'cancelled'
+
+    db.session.delete(race)
+    db.session.commit()
+    flash(f"Course #{race_id} annulée et paris remboursés.", "success")
+    return redirect(url_for('admin.admin'))
+
+
+@admin_bp.route('/admin/events/trigger', methods=['POST'])
+def admin_trigger_event():
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login', next=request.path))
+    user = User.query.get(session['user_id'])
+    if not user or not user.is_admin:
+        return redirect(url_for('main.index'))
+
+    event_type = request.form.get('event_type')
+    if event_type == 'food_drop':
+        all_pigs = Pig.query.filter_by(is_alive=True).all()
+        for p in all_pigs:
+            p.energy = min(100, (p.energy or 0) + 30)
+            p.hunger = min(100, (p.hunger or 0) + 30)
+        db.session.commit()
+        flash("📦 Distribution de nourriture effectuée ! +30 Énergie/Faim pour tous les groins.", "success")
+    elif event_type == 'vet_visit':
+        injured_pigs = Pig.query.filter_by(is_alive=True, is_injured=True).all()
+        for p in injured_pigs:
+            p.is_injured = False
+            p.injured_until = None
+        db.session.commit()
+        flash(f"🏥 Visite vétérinaire ! {len(injured_pigs)} groins soignés.", "success")
+    elif event_type == 'bonus_bg':
+        from helpers import credit_user_balance
+        all_users = User.query.all()
+        for u in all_users:
+            credit_user_balance(u.id, 50.0, reason_code='admin_gift', reason_label='Cadeau Admin', reference_type='user', reference_id=user.id)
+        db.session.commit()
+        flash("💰 Bonus de 50 BG accordé à tous les joueurs !", "success")
+    else:
+        flash("Événement inconnu.", "error")
+
     return redirect(url_for('admin.admin'))
