@@ -143,6 +143,7 @@
                 <a href="/mon-cochon" class="text-pink-400/80 hover:text-pink-300 text-sm font-bold transition-colors">🐷 Mon Cochon</a>
                 <a href="/marche" class="text-white/60 hover:text-white text-sm font-bold transition-colors">🏪 Marché</a>
                 <a href="/classement" class="text-yellow-400 hover:text-yellow-500 text-sm font-bold transition-colors">🏆 Classement</a>
+                <a href="/profil" class="text-cyan-300/80 hover:text-cyan-200 text-sm font-bold transition-colors">👤 Profil</a>
                 <a href="/history" class="text-white/60 hover:text-white text-sm font-bold transition-colors">Historique</a>
                 <a href="/legendes-pop" class="text-purple-400 hover:text-purple-300 text-sm font-bold transition-colors">🌟 Pop Cult'</a>
                 <a href="/cimetiere" class="text-purple-400/50 hover:text-purple-400 text-sm font-bold transition-colors">⚰️ Cimetière</a>
@@ -205,7 +206,13 @@
     </div>
 
     <!-- VENDRE SON COCHON -->
-    {% if user and pigs and market_open %}
+    {% if user and not market_access %}
+    <div class="card p-5 mb-8 text-center border-yellow-900/20">
+        <p class="text-yellow-300 font-bold text-sm">🔐 Marché verrouillé pour les nouveaux éleveurs</p>
+        <p class="text-white/45 text-sm mt-2 font-semibold">{{ market_lock_reason }}</p>
+    </div>
+    {% endif %}
+    {% if user and pigs and market_open and market_access %}
     <div class="card p-6 mb-8 border-yellow-900/30">
         <h2 class="font-title text-xl text-white mb-4">🏷️ Vendre un cochon</h2>
         
@@ -239,13 +246,17 @@
                                class="w-full bg-black/30 border border-yellow-900/30 rounded-xl px-4 py-2 text-white font-bold text-sm focus:outline-none focus:border-yellow-400">
                     </div>
                     <button type="submit" class="btn-sell px-6 py-2 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded-xl transition-all"
-                            onclick="return confirm('⚠️ {{ pig.name }} sera mis en vente !\nSi quelqu\'un l\'achète, tu recevras les BG.\nSinon, il sera perdu...\n\nContinuer ?');">
+                            onclick="return confirm('⚠️ {{ pig.name }} sera mis en vente !\nSi quelqu\'un l\'achète, tu recevras les BG.\nS\'il ne part pas, il reviendra chez toi à la fin du marché.\n\nContinuer ?');">
                         Mettre en vente
                     </button>
                 </form>
             </div>
             {% endfor %}
         </div>
+    </div>
+    {% elif user and pigs and market_open and not market_access %}
+    <div class="card p-5 mb-8 text-center border-yellow-900/20">
+        <p class="text-white/40 text-sm font-bold">🔒 La vente de cochons se débloque après quelques courses ou 24h d'ancienneté.</p>
     </div>
     {% elif user and pigs and not market_open %}
     <div class="card p-5 mb-8 text-center border-yellow-900/20">
@@ -342,7 +353,7 @@
                 </div>
 
                 <!-- Formulaire d'enchère -->
-                {% if user %}
+                {% if user and market_access %}
                 <form method="POST" action="/bid" class="flex gap-2">
                     <input type="hidden" name="auction_id" value="{{ auction.id }}">
                     <input type="number" name="bid_amount"
@@ -365,6 +376,10 @@
                     ⚠️ Si tu gagnes, {{ pig.name }} ira à l'abattoir
                 </p>
                 {% endif %}
+                {% elif user and not market_access %}
+                <div class="text-center">
+                    <p class="text-white/35 text-xs font-bold">{{ market_lock_reason }}</p>
+                </div>
                 {% else %}
                 <div class="text-center">
                     <a href="/login" class="text-yellow-400/70 hover:text-yellow-400 text-sm font-bold transition-colors">

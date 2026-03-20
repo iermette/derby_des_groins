@@ -21,6 +21,7 @@
 - **Entraînement** : les séances consomment des ressources et améliorent des compétences ciblées.
 - **École porcine** : des quiz tactiques accordent XP et bonus de stats, avec un cooldown indépendant par cochon.
 - **Courses automatiques** : les cochons aptes sont inscrits, la puissance moyenne sert à calculer probabilités et cotes.
+- **Garde-fous économiques** : un seul pari par course, cotes avec marge maison, prime d'urgence et retour automatique des cochons invendus.
 - **Marché** : enchères limitées dans le temps avec résolution automatique.
 - **Mort / retraite / abattoir** : les cochons ont une durée de vie et peuvent finir en charcuterie mémorable.
 

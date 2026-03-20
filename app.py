@@ -28,6 +28,7 @@ class User(db.Model):
     balance = db.Column(db.Float, default=100.0)
     is_admin = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_relief_at = db.Column(db.DateTime, nullable=True)
     bets = db.relationship('Bet', backref='user', lazy=True)
 
 class Pig(db.Model):
@@ -355,6 +356,15 @@ STAT_LABELS = {
     'moral': 'MOR',
 }
 
+EMERGENCY_RELIEF_THRESHOLD = 10.0
+EMERGENCY_RELIEF_AMOUNT = 20.0
+EMERGENCY_RELIEF_HOURS = 12
+SECOND_PIG_COST = 30.0
+REPLACEMENT_PIG_COST = 15.0
+BETTING_HOUSE_EDGE = 1.18
+RACE_APPEARANCE_REWARD = 6.0
+RACE_POSITION_REWARDS = {1: 25.0, 2: 12.0, 3: 6.0}
+
 CHARCUTERIE = [
     {'name': 'Jambon', 'emoji': '🍖', 'msg': 'Un beau jambon fumé au bois de hêtre'},
     {'name': 'Saucisson sec', 'emoji': '🌭', 'msg': 'Tranché finement, un régal à l\'apéro'},
@@ -456,8 +466,10 @@ def init_default_config():
 # ─── HELPERS COCHON ─────────────────────────────────────────────────────────
 
 def calculate_pig_power(pig):
-    return (pig.vitesse + pig.endurance + pig.agilite +
-            pig.force + pig.intelligence + pig.moral) / 6
+    stats = [pig.vitesse, pig.endurance, pig.agilite, pig.force, pig.intelligence, pig.moral]
+    stat_score = sum(math.sqrt(max(0.0, stat) / 100.0) * 100 for stat in stats) / len(stats)
+    condition_factor = 0.8 + (((pig.energy + pig.hunger + pig.happiness) / 3.0) / 100.0) * 0.4
+    return round(stat_score * condition_factor, 2)
 
 def xp_for_level(level):
     return int(100 * (level ** 1.5))
@@ -505,10 +517,72 @@ def format_duration_short(total_seconds):
         return f"{minutes}m"
     return f"{seconds}s"
 
+def maybe_grant_emergency_relief(user):
+    if not user or user.balance >= EMERGENCY_RELIEF_THRESHOLD:
+        return 0.0
+    now = datetime.utcnow()
+    if user.last_relief_at:
+        elapsed = (now - user.last_relief_at).total_seconds()
+        if elapsed < EMERGENCY_RELIEF_HOURS * 3600:
+            return 0.0
+    user.balance = round(user.balance + EMERGENCY_RELIEF_AMOUNT, 2)
+    user.last_relief_at = now
+    db.session.commit()
+    return EMERGENCY_RELIEF_AMOUNT
+
+def get_active_listing_count(user):
+    return Auction.query.filter_by(seller_id=user.id, status='active').count()
+
+def get_pig_slot_count(user):
+    active_pigs = Pig.query.filter_by(user_id=user.id, is_alive=True).count()
+    return active_pigs + get_active_listing_count(user)
+
+def get_adoption_cost(user):
+    slot_count = get_pig_slot_count(user)
+    if slot_count >= 2:
+        return None
+    if Pig.query.filter_by(user_id=user.id, is_alive=True).count() == 0:
+        return REPLACEMENT_PIG_COST
+    return SECOND_PIG_COST
+
+def get_market_unlock_progress(user):
+    total_races = sum(p.races_entered for p in Pig.query.filter_by(user_id=user.id).all())
+    account_age_hours = ((datetime.utcnow() - user.created_at).total_seconds() / 3600) if user.created_at else 0
+    unlocked = account_age_hours >= 24 or total_races >= 3
+    return unlocked, total_races, account_age_hours
+
+def get_market_lock_reason(user):
+    unlocked, total_races, account_age_hours = get_market_unlock_progress(user)
+    if unlocked:
+        return None
+    remaining_races = max(0, 3 - total_races)
+    remaining_hours = max(0, int(math.ceil(24 - account_age_hours)))
+    return f"Le marché se débloque après 3 courses disputées ou 24h d'ancienneté. Il te reste {remaining_races} course(s) ou environ {remaining_hours}h."
+
+def apply_origin_bonus(pig, origin):
+    base_value = getattr(pig, origin['bonus_stat']) or 10.0
+    setattr(pig, origin['bonus_stat'], base_value + origin['bonus'])
+
+def refresh_race_betting_lines(race):
+    if not race or race.status != 'open':
+        return
+    if Bet.query.filter_by(race_id=race.id).count() > 0:
+        return
+    participants = Participant.query.filter_by(race_id=race.id).all()
+    if not participants:
+        return
+    total_prob = sum(p.win_probability for p in participants) or 1.0
+    for participant in participants:
+        participant.win_probability = participant.win_probability / total_prob
+        participant.odds = max(1.1, math.floor(((1 / participant.win_probability) / BETTING_HOUSE_EDGE) * 10) / 10)
+    db.session.commit()
+
 def get_user_active_pigs(user):
-    """Retourne la liste des cochons vivants de l'utilisateur. En crée un si aucun."""
+    """Retourne les cochons vivants. Crée uniquement le tout premier si nécessaire."""
     pigs = Pig.query.filter_by(user_id=user.id, is_alive=True).all()
     if not pigs:
+        if Pig.query.filter_by(user_id=user.id).count() > 0:
+            return []
         origin = random.choice(PIG_ORIGINS)
         pig = Pig(
             user_id=user.id,
@@ -518,7 +592,7 @@ def get_user_active_pigs(user):
             origin_flag=origin['flag']
         )
         # Bonus d'origine
-        setattr(pig, origin['bonus_stat'], getattr(pig, origin['bonus_stat']) + origin['bonus'])
+        apply_origin_bonus(pig, origin)
         db.session.add(pig)
         db.session.commit()
         return [pig]
@@ -675,6 +749,15 @@ def resolve_auctions():
                     seller.balance = round(seller.balance + auction.current_bid, 2)
         else:
             auction.status = 'expired'
+            if auction.seller_id and auction.source_pig_id:
+                returned_pig = Pig.query.get(auction.source_pig_id)
+                if returned_pig and returned_pig.user_id == auction.seller_id:
+                    returned_pig.is_alive = True
+                    returned_pig.death_date = None
+                    returned_pig.death_cause = None
+                    returned_pig.charcuterie_type = None
+                    returned_pig.charcuterie_emoji = None
+                    returned_pig.epitaph = None
 
     # Générer des cochons si marché ouvert et peu d'enchères
     if is_market_open():
@@ -704,6 +787,7 @@ def ensure_next_race():
         Race.status.in_(['upcoming', 'open'])
     ).first()
     if existing:
+        refresh_race_betting_lines(existing)
         return existing
 
     race = Race(scheduled_at=next_time, status='open')
@@ -713,6 +797,7 @@ def ensure_next_race():
     MAX_PARTICIPANTS = 8
     participants_list = []
     all_powers = []
+    player_powers = []
 
     fit_pigs = Pig.query.filter(Pig.is_alive == True, Pig.energy > 20, Pig.hunger > 20).all()
     for p in fit_pigs:
@@ -723,6 +808,7 @@ def ensure_next_race():
 
     for pig in fit_pigs:
         power = calculate_pig_power(pig)
+        player_powers.append(power)
         all_powers.append(power)
         owner = User.query.get(pig.user_id)
         p = Participant(
@@ -738,8 +824,11 @@ def ensure_next_race():
         player_names = {pig.name for pig in fit_pigs}
         available_npcs = [npc for npc in PIGS if npc['name'] not in player_names]
         selected_npcs = random.sample(available_npcs, min(npc_count, len(available_npcs)))
+        avg_player_power = sum(player_powers) / len(player_powers) if player_powers else 34.0
+        npc_min_power = max(22.0, avg_player_power * 0.9)
+        npc_max_power = max(npc_min_power + 2.0, avg_player_power * 1.1)
         for npc in selected_npcs:
-            npc_power = random.uniform(20, 40)
+            npc_power = random.uniform(npc_min_power, npc_max_power)
             all_powers.append(npc_power)
             p = Participant(
                 race_id=race.id, name=npc['name'], emoji=npc['emoji'],
@@ -749,12 +838,11 @@ def ensure_next_race():
             participants_list.append(p)
 
     total_power = sum(all_powers) if all_powers else 1
-    margin = 1.15
     for i, p in enumerate(participants_list):
         prob = all_powers[i] / total_power
         p.win_probability = prob
-        raw_odds = (1 / prob) * margin
-        p.odds = max(1.5, round(raw_odds * 2) / 2)
+        raw_odds = (1 / prob) / BETTING_HOUSE_EDGE
+        p.odds = max(1.1, math.floor(raw_odds * 10) / 10)
 
     db.session.commit()
     return race
@@ -793,12 +881,16 @@ def run_race_if_needed():
                 pig = Pig.query.get(p.pig_id)
                 if not pig or not pig.is_alive:
                     continue
+                owner = User.query.get(pig.user_id)
                 pig.races_entered += 1
                 xp_gained = POSITION_XP.get(p.finish_position, 3)
 
+                if owner:
+                    reward = RACE_APPEARANCE_REWARD + RACE_POSITION_REWARDS.get(p.finish_position, 0.0)
+                    owner.balance = round(owner.balance + reward, 2)
+
                 if pig.challenge_mort_wager > 0:
                     wager = pig.challenge_mort_wager
-                    owner = User.query.get(pig.user_id)
                     if p.finish_position <= 3:
                         if owner:
                             owner.balance = round(owner.balance + wager * 3, 2)
@@ -898,7 +990,7 @@ def register():
         origin = random.choice(PIG_ORIGINS)
         pig = Pig(user_id=user.id, name=f"Cochon de {username}", emoji='🐷',
                   origin_country=origin['country'], origin_flag=origin['flag'])
-        setattr(pig, origin['bonus_stat'], getattr(pig, origin['bonus_stat']) + origin['bonus'])
+        apply_origin_bonus(pig, origin)
         db.session.add(pig)
         db.session.commit()
         session['user_id'] = user.id
@@ -922,6 +1014,92 @@ def logout():
     session.pop('user_id', None)
     return redirect(url_for('index'))
 
+@app.route('/profil', methods=['GET', 'POST'])
+def profil():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user = User.query.get(session['user_id'])
+    if not user:
+        session.pop('user_id', None)
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        current_password = request.form.get('current_password', '').strip()
+        new_password = request.form.get('new_password', '').strip()
+        confirm_password = request.form.get('confirm_password', '').strip()
+
+        if not current_password or not new_password or not confirm_password:
+            flash("Remplis tous les champs pour changer ton mot de passe.", "warning")
+        elif not check_password_hash(user.password_hash, current_password):
+            flash("Ton mot de passe actuel est incorrect.", "error")
+        elif len(new_password) < 6:
+            flash("Ton nouveau mot de passe doit faire au moins 6 caractères.", "warning")
+        elif current_password == new_password:
+            flash("Choisis un mot de passe différent de l'actuel.", "warning")
+        elif new_password != confirm_password:
+            flash("La confirmation du nouveau mot de passe ne correspond pas.", "error")
+        else:
+            user.password_hash = generate_password_hash(new_password)
+            db.session.commit()
+            flash("Mot de passe mis à jour avec succès.", "success")
+        return redirect(url_for('profil'))
+
+    pigs = Pig.query.filter_by(user_id=user.id).order_by(Pig.created_at.desc()).all()
+    bets = Bet.query.filter_by(user_id=user.id).order_by(Bet.placed_at.desc()).all()
+    active_listings = Auction.query.filter_by(seller_id=user.id, status='active').all()
+    active_listing_ids = {listing.source_pig_id for listing in active_listings if listing.source_pig_id}
+
+    active_pigs = [pig for pig in pigs if pig.is_alive]
+    retired_pigs = [pig for pig in pigs if not pig.is_alive and pig.id not in active_listing_ids]
+    total_races = sum((pig.races_entered or 0) for pig in pigs)
+    total_wins = sum((pig.races_won or 0) for pig in pigs)
+    total_school_sessions = sum((pig.school_sessions_completed or 0) for pig in pigs)
+    legendary_pigs = sum(1 for pig in pigs if pig.rarity == 'legendaire')
+    best_pig = max(pigs, key=lambda pig: ((pig.races_won or 0), (pig.level or 0), (pig.xp or 0)), default=None)
+
+    won_bets = [bet for bet in bets if bet.status == 'won']
+    lost_bets = [bet for bet in bets if bet.status == 'lost']
+    pending_bets = [bet for bet in bets if bet.status == 'pending']
+    settled_bets = won_bets + lost_bets
+
+    total_staked = round(sum((bet.amount or 0.0) for bet in bets), 2)
+    total_winnings = round(sum((bet.winnings or 0.0) for bet in won_bets), 2)
+    total_profit = round(total_winnings - sum((bet.amount or 0.0) for bet in settled_bets), 2)
+    race_win_rate = round((total_wins / total_races) * 100, 1) if total_races else 0.0
+    bet_win_rate = round((len(won_bets) / len(settled_bets)) * 100, 1) if settled_bets else 0.0
+
+    market_unlocked, market_progress_races, account_age_hours = get_market_unlock_progress(user)
+    market_hours_left = max(0, int(math.ceil(24 - account_age_hours)))
+
+    return render_template(
+        'profil.html',
+        user=user,
+        pigs=pigs,
+        active_pigs=active_pigs,
+        retired_pigs=retired_pigs,
+        best_pig=best_pig,
+        total_races=total_races,
+        total_wins=total_wins,
+        total_school_sessions=total_school_sessions,
+        legendary_pigs=legendary_pigs,
+        race_win_rate=race_win_rate,
+        bets=bets,
+        won_bets=won_bets,
+        lost_bets=lost_bets,
+        pending_bets=pending_bets,
+        total_staked=total_staked,
+        total_winnings=total_winnings,
+        total_profit=total_profit,
+        bet_win_rate=bet_win_rate,
+        market_unlocked=market_unlocked,
+        market_progress_races=market_progress_races,
+        market_hours_left=market_hours_left,
+        market_lock_reason=get_market_lock_reason(user),
+        active_listing_count=get_active_listing_count(user),
+        active_listing_ids=active_listing_ids,
+    )
+
 @app.route('/bet', methods=['POST'])
 def place_bet():
     if 'user_id' not in session:
@@ -944,7 +1122,7 @@ def place_bet():
         return redirect(url_for('index'))
     if amount <= 0 or amount > user.balance:
         return redirect(url_for('index'))
-    existing = Bet.query.filter_by(user_id=user.id, race_id=race_id, pig_name=pig_name).first()
+    existing = Bet.query.filter_by(user_id=user.id, race_id=race_id).first()
     if existing:
         return redirect(url_for('index'))
     bet = Bet(user_id=user.id, race_id=race_id, pig_name=pig_name,
@@ -969,7 +1147,12 @@ def mon_cochon():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user = User.query.get(session['user_id'])
+    relief_amount = maybe_grant_emergency_relief(user)
+    if relief_amount > 0:
+        flash(f"🛟 Prime d'élevage d'urgence: +{relief_amount:.0f} BG pour relancer ton élevage.", "success")
     pigs = get_user_active_pigs(user)
+    adoption_cost = get_adoption_cost(user)
+    active_listing_count = get_active_listing_count(user)
     
     # Préparer les données pour chaque cochon
     pigs_data = []
@@ -993,7 +1176,8 @@ def mon_cochon():
     return render_template('mon_cochon.html',
         user=user, pigs_data=pigs_data, cereals=CEREALS, trainings=TRAININGS,
         school_lessons=SCHOOL_LESSONS, school_cooldown_minutes=SCHOOL_COOLDOWN_MINUTES,
-        pig_emojis=PIG_EMOJIS, stat_labels=STAT_LABELS
+        pig_emojis=PIG_EMOJIS, stat_labels=STAT_LABELS,
+        adoption_cost=adoption_cost, active_listing_count=active_listing_count
     )
 
 @app.route('/adopt-second-pig')
@@ -1002,30 +1186,34 @@ def adopt_second_pig():
         return redirect(url_for('login'))
     user = User.query.get(session['user_id'])
     active_pigs = Pig.query.filter_by(user_id=user.id, is_alive=True).all()
-    if len(active_pigs) >= 2:
+    if get_pig_slot_count(user) >= 2:
         flash("Tu as déjà le maximum de cochons (2) !", "warning")
         return redirect(url_for('mon_cochon'))
-    
-    # Adopter un deuxième cochon coûte 50 BG par exemple (ou gratuit ?)
-    # On va dire 30 BG pour le second
-    cost = 30.0
-    if user.balance < cost:
-        flash(f"Il te faut {cost:.0f} BG pour adopter un second cochon !", "error")
+
+    cost = get_adoption_cost(user)
+    if cost is None:
+        flash("Impossible d'adopter un nouveau cochon pour l'instant.", "warning")
         return redirect(url_for('mon_cochon'))
-    
+    if user.balance < cost:
+        flash(f"Il te faut {cost:.0f} BG pour adopter un nouveau cochon !", "error")
+        return redirect(url_for('mon_cochon'))
+
     user.balance = round(user.balance - cost, 2)
     origin = random.choice(PIG_ORIGINS)
     new_pig = Pig(
         user_id=user.id,
-        name=f"Second de {user.username}",
+        name=f"Second de {user.username}" if active_pigs else f"Rescapé de {user.username}",
         emoji='🐖',
         origin_country=origin['country'],
         origin_flag=origin['flag']
     )
-    setattr(new_pig, origin['bonus_stat'], getattr(new_pig, origin['bonus_stat']) + origin['bonus'])
+    apply_origin_bonus(new_pig, origin)
     db.session.add(new_pig)
     db.session.commit()
-    flash("✨ Nouveau cochon adopté ! Bienvenue dans l'écurie.", "success")
+    if active_pigs:
+        flash("✨ Nouveau cochon adopté ! Bienvenue dans l'écurie.", "success")
+    else:
+        flash("✨ Un cochon de secours rejoint ton élevage. C'est reparti.", "success")
     return redirect(url_for('mon_cochon'))
 
 @app.route('/feed', methods=['POST'])
@@ -1262,11 +1450,15 @@ def marche():
 
     user = None
     pigs = [] # Initialize pigs list
+    market_access = False
+    market_lock_reason = None
     if 'user_id' in session:
         user = User.query.get(session['user_id'])
         if user:
             # Get all active pigs for the user to potentially sell
             pigs = Pig.query.filter_by(user_id=user.id, is_alive=True).all()
+            market_access = get_market_unlock_progress(user)[0]
+            market_lock_reason = get_market_lock_reason(user)
 
     market_open = is_market_open()
     next_market = get_next_market_time()
@@ -1280,7 +1472,8 @@ def marche():
         rarities=RARITIES, now=datetime.utcnow(),
         market_open=market_open, next_market=next_market,
         market_day_name=market_day_name, market_time=market_time,
-        prix_groin=prix_groin, origins=PIG_ORIGINS
+        prix_groin=prix_groin, origins=PIG_ORIGINS,
+        market_access=market_access, market_lock_reason=market_lock_reason
     )
 
 @app.route('/bid', methods=['POST'])
@@ -1288,6 +1481,9 @@ def bid():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user = User.query.get(session['user_id'])
+    if not get_market_unlock_progress(user)[0]:
+        flash(get_market_lock_reason(user), "warning")
+        return redirect(url_for('marche'))
     auction_id = request.form.get('auction_id', type=int)
     bid_amount = request.form.get('bid_amount', type=float)
     auction = Auction.query.get(auction_id)
@@ -1320,10 +1516,13 @@ def sell_pig():
     """Mettre son cochon en vente sur le marché."""
     if 'user_id' not in session:
         return redirect(url_for('login'))
+    user = User.query.get(session['user_id'])
+    if not get_market_unlock_progress(user)[0]:
+        flash(get_market_lock_reason(user), "warning")
+        return redirect(url_for('marche'))
     if not is_market_open():
         flash("Le marché est fermé ! Reviens le jour du marché.", "error")
         return redirect(url_for('marche'))
-    user = User.query.get(session['user_id'])
     pig_id = request.form.get('pig_id', type=int)
     pig = Pig.query.filter_by(id=pig_id, user_id=user.id, is_alive=True).first()
     if not pig:
@@ -1451,6 +1650,7 @@ def admin_force_race():
     MAX_PARTICIPANTS = 8
     participants_list = []
     all_powers = []
+    player_powers = []
 
     fit_pigs = Pig.query.filter(Pig.is_alive == True, Pig.energy > 20, Pig.hunger > 20).all()
     for p in fit_pigs:
@@ -1461,6 +1661,7 @@ def admin_force_race():
 
     for pig in fit_pigs:
         power = calculate_pig_power(pig)
+        player_powers.append(power)
         all_powers.append(power)
         owner = User.query.get(pig.user_id)
         p = Participant(race_id=race.id, name=pig.name, emoji=pig.emoji,
@@ -1472,8 +1673,11 @@ def admin_force_race():
     player_names = {pig.name for pig in fit_pigs}
     available_npcs = [npc for npc in PIGS if npc['name'] not in player_names]
     npc_count = min(MAX_PARTICIPANTS - len(fit_pigs), len(available_npcs))
+    avg_player_power = sum(player_powers) / len(player_powers) if player_powers else 34.0
+    npc_min_power = max(22.0, avg_player_power * 0.9)
+    npc_max_power = max(npc_min_power + 2.0, avg_player_power * 1.1)
     for npc in random.sample(available_npcs, npc_count):
-        npc_power = random.uniform(20, 40)
+        npc_power = random.uniform(npc_min_power, npc_max_power)
         all_powers.append(npc_power)
         p = Participant(race_id=race.id, name=npc['name'], emoji=npc['emoji'],
                         pig_id=None, owner_name=None, odds=0, win_probability=0)
@@ -1484,7 +1688,7 @@ def admin_force_race():
     for i, p in enumerate(participants_list):
         prob = all_powers[i] / total_power
         p.win_probability = prob
-        p.odds = max(1.5, round((1 / prob) * 1.15 * 2) / 2)
+        p.odds = max(1.1, math.floor(((1 / prob) / BETTING_HOUSE_EDGE) * 10) / 10)
 
     db.session.commit()
     run_race_if_needed()
@@ -1546,18 +1750,35 @@ def legendes_pop():
         user = User.query.get(session['user_id'])
     
     pop_pigs = [
-        {'name': 'Babe', 'emoji': '🐑', 'desc': 'Le cochon devenu berger. Un cœur d\'or et une volonté de fer.', 'category': 'Film'},
-        {'name': 'Miss Piggy', 'emoji': '🎀', 'desc': 'Diva absolue du Muppet Show. Maîtrise le karaté et la mode.', 'category': 'TV'},
-        {'name': 'Spider-Cochon', 'emoji': '🕷️', 'desc': 'Aussi connu sous le nom de Harry Crotte. Marche au plafond (parfois).', 'category': 'Animation'},
-        {'name': 'Naf-Naf, Nif-Nif & Nouf-Nouf', 'emoji': '🏠', 'desc': 'Les Trois Petits Cochons originels. Le loup s\'en casse encore les dents.', 'category': 'Conte'},
-        {'name': 'Porcinet', 'emoji': '🧣', 'desc': 'Petit mais courageux (quand il n\'a pas peur). Meilleur ami de Winnie l\'Ourson.', 'category': 'Animation'},
-        {'name': 'Pumbaa', 'emoji': '🐗', 'desc': 'Hakuna Matata ! Un phacochère à l\'appétit d\'ogre et au cœur tendre.', 'category': 'Animation'},
-        {'name': 'Napoléon', 'emoji': '👑', 'desc': 'Leader incontesté de la Ferme des Animaux. Dictateur charismatique.', 'category': 'Littérature'},
-        {'name': 'Bayonne', 'emoji': '🪙', 'desc': 'Le cochon tirelire de Toy Story. Cynique mais fidèle.', 'category': 'Animation'},
-        {'name': 'Fleury Michon', 'emoji': '🍖', 'desc': 'L\'ambassadeur de la charcuterie. Une légende en barquette.', 'category': 'Industrie'},
-        {'name': 'Justin Bridou', 'emoji': '🥖', 'desc': 'Le roi du saucisson, le vrai copain de l\'apéro.', 'category': 'Industrie'},
-        {'name': 'Peppa Pig', 'emoji': '☔', 'desc': 'Adore sauter dans les flaques de boue. Icône mondiale indétrônable.', 'category': 'Animation'},
-        {'name': 'Ganon', 'emoji': '🔱', 'desc': 'Le destructeur suprême (Zelda) sous sa forme de bête. Plutôt grognon.', 'category': 'Jeu Vidéo'},
+        # Stars du Marché
+        {'name': 'Porky Pig', 'emoji': '🎩', 'desc': 'Le pionnier. A transformé un bégaiement en une carrière légendaire.', 'category': 'Stars du Marché'},
+        {'name': 'Miss Piggy', 'emoji': '🎀', 'desc': 'Influenceuse avant Instagram. Mélange unique de glamour et de violence passive-agressive.', 'category': 'Stars du Marché'},
+        {'name': 'Peppa Pig', 'emoji': '☔', 'desc': 'CEO d’un empire mondial basé sur des grognements et des flaques de boue.', 'category': 'Stars du Marché'},
+        {'name': 'Porcinet', 'emoji': '🧣', 'desc': '12 kg de stress, mais validé émotionnellement par toute une génération.', 'category': 'Stars du Marché'},
+
+        # Intellectuels / Dangereux
+        {'name': 'Napoléon', 'emoji': '👑', 'desc': 'Commence comme cochon, finit comme manager toxique (La Ferme des Animaux).', 'category': 'Niveau Dangereux'},
+        {'name': 'Porco Rosso', 'emoji': '🛩️', 'desc': 'Pilote, philosophe, cochon. Trois problèmes complexes en un seul groin.', 'category': 'Niveau Dangereux'},
+        {'name': 'Cochons (Pink Floyd)', 'emoji': '🎸', 'desc': 'Métaphore officielle des élites. Entrée validée par guitare électrique.', 'category': 'Niveau Dangereux'},
+        {'name': 'Tête de cochon', 'emoji': '💀', 'desc': 'Quand un cochon mort devient plus charismatique que les humains (Sa Majesté des Mouches).', 'category': 'Niveau Dangereux'},
+
+        # Cochons du Quotidien
+        {'name': 'Cochon Minecraft', 'emoji': '🧊', 'desc': 'Moyen de transport discutable. Existe principalement pour être transformé en côtelette.', 'category': 'Quotidien Suspect'},
+        {'name': 'Cochons Verts', 'emoji': '🤢', 'desc': 'Ingénieurs en structures inefficaces (Angry Birds).', 'category': 'Quotidien Suspect'},
+        {'name': 'Hog Rider', 'emoji': '🔨', 'desc': 'Un homme qui crie sur un cochon. Personne ne remet ça en question.', 'category': 'Quotidien Suspect'},
+        {'name': 'Hamm / Bayonne', 'emoji': '🪙', 'desc': 'Tirelire cynique de Toy Story. Le seul qui comprend réellement l’économie.', 'category': 'Quotidien Suspect'},
+
+        # Patrimoine & Héritage
+        {'name': 'Nif-Nif, Naf-Naf & Nouf-Nouf', 'emoji': '🏠', 'desc': 'Trois approches du BTP. Une seule résiste réellement au souffle du loup.', 'category': 'Patrimoine'},
+        {'name': 'Babe', 'emoji': '🐑', 'desc': 'Le seul cochon avec un plan de carrière et une reconversion réussie.', 'category': 'Patrimoine'},
+        {'name': 'Wilbur', 'emoji': '🕸️', 'desc': 'Sauvé par une araignée (Charlotte) meilleure en communication de crise que lui.', 'category': 'Patrimoine'},
+        {'name': 'Peter Pig', 'emoji': '⚓', 'desc': 'Preuve que même chez Disney, certains cochons n’ont pas percé.', 'category': 'Patrimoine'},
+
+        # Secondaires
+        {'name': 'Petunia Pig', 'emoji': '👒', 'desc': 'Love interest officielle. Un potentiel inexploité par les studios.', 'category': 'Secondaires'},
+        {'name': 'Piggy (Merrie Melodies)', 'emoji': '🤡', 'desc': 'Version bêta de Porky Pig. A servi de crash-test pour l’humour.', 'category': 'Secondaires'},
+        {'name': 'Arnold Ziffel', 'emoji': '📺', 'desc': 'Cochon traité comme un humain complet. Personne ne pose de questions.', 'category': 'Secondaires'},
+        {'name': 'Pumbaa', 'emoji': '🐗', 'desc': 'Techniquement un phacochère. Accepté dans la base pour raisons administratives.', 'category': 'Secondaires'},
     ]
     return render_template('legendes_pop.html', user=user, pop_pigs=pop_pigs)
 
@@ -1637,6 +1858,7 @@ def migrate_db():
         ('pig', 'last_school_at', 'DATETIME'),
         ('pig', 'school_sessions_completed', 'INTEGER DEFAULT 0'),
         ('user', 'is_admin', 'BOOLEAN DEFAULT 0'),
+        ('user', 'last_relief_at', 'DATETIME'),
         ('auction', 'seller_id', 'INTEGER'),
         ('auction', 'source_pig_id', 'INTEGER'),
         ('auction', 'pig_origin', 'VARCHAR(30)'),
@@ -1682,7 +1904,7 @@ def seed_users():
                 user_id=user.id, name=u['pig_name'], emoji=u['emoji'],
                 origin_country=origin_data['country'], origin_flag=origin_data['flag']
             )
-            setattr(pig, origin_data['bonus_stat'], getattr(pig, origin_data['bonus_stat']) + origin_data['bonus'])
+            apply_origin_bonus(pig, origin_data)
             db.session.add(pig)
     db.session.commit()
 

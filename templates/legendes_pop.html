@@ -81,6 +81,7 @@
                 <a href="/mon-cochon" class="text-pink-400/80 hover:text-pink-300 text-sm font-bold transition-colors">🐷 Mon Cochon</a>
                 <a href="/marche" class="text-white/60 hover:text-white text-sm font-bold transition-colors">🏪 Marché</a>
                 <a href="/classement" class="text-yellow-400 hover:text-yellow-500 text-sm font-bold transition-colors">🏆 Classement</a>
+                <a href="/profil" class="text-cyan-300/80 hover:text-cyan-200 text-sm font-bold transition-colors">👤 Profil</a>
                 <a href="/history" class="text-white/60 hover:text-white text-sm font-bold transition-colors">Historique</a>
                 <a href="/legendes-pop" class="text-purple-400 hover:text-purple-300 text-sm font-bold transition-colors">🌟 Pop Cult'</a>
                 <a href="/cimetiere" class="text-purple-400/50 hover:text-purple-400 text-sm font-bold transition-colors">⚰️ Cimetière</a>
@@ -107,19 +108,32 @@
         </p>
     </section>
 
-    <!-- GRID -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    <!-- SECTIONS -->
+    {% set current_cat = [] %}
+    <div class="space-y-16">
         {% for p in pop_pigs %}
-        <div class="card p-6 text-center">
-            <div class="mb-4 h-20 flex items-center justify-center">
-                <span class="pig-emoji" style="animation-delay: {{ loop.index0 * 0.2 }}s;">{{ p.emoji }}</span>
+            {% if p.category != current_cat[-1] %}
+                {% if current_cat %}</div></div>{% endif %}
+                {% set _ = current_cat.append(p.category) %}
+                <div class="category-section">
+                    <h2 class="font-title text-3xl text-white mb-8 flex items-center gap-3">
+                        <span class="w-12 h-1 bg-yellow-500 rounded-full"></span>
+                        {{ p.category }}
+                    </h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {% endif %}
+            
+            <div class="card p-6 text-center">
+                <div class="mb-4 h-20 flex items-center justify-center">
+                    <span class="pig-emoji" style="animation-delay: {{ loop.index0 * 0.1 }}s;">{{ p.emoji }}</span>
+                </div>
+                <h3 class="font-title text-2xl text-yellow-400 mb-2">{{ p.name }}</h3>
+                <p class="text-white/70 text-sm font-semibold leading-relaxed">
+                    {{ p.desc }}
+                </p>
             </div>
-            <span class="category-badge mb-3 inline-block">{{ p.category }}</span>
-            <h3 class="font-title text-2xl text-yellow-400 mb-2">{{ p.name }}</h3>
-            <p class="text-white/70 text-sm font-semibold leading-relaxed">
-                {{ p.desc }}
-            </p>
-        </div>
+            
+            {% if loop.last %}</div></div>{% endif %}
         {% endfor %}
     </div>
 

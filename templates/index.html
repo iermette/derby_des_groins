@@ -162,6 +162,7 @@
                 <a href="/mon-cochon" class="text-pink-400/80 hover:text-pink-300 text-sm font-bold transition-colors">🐷 Mon Cochon</a>
                 <a href="/marche" class="text-yellow-600/80 hover:text-yellow-500 text-sm font-bold transition-colors">🏪 Marché</a>
                 <a href="/classement" class="text-yellow-400 hover:text-yellow-500 text-sm font-bold transition-colors">🏆 Classement</a>
+                <a href="/profil" class="text-cyan-300/80 hover:text-cyan-200 text-sm font-bold transition-colors">👤 Profil</a>
                 <a href="/history" class="text-white/60 hover:text-white text-sm font-bold transition-colors">Historique</a>
                 <a href="/legendes-pop" class="text-purple-400 hover:text-purple-300 text-sm font-bold transition-colors">🌟 Pop Cult'</a>
                 <a href="/cimetiere" class="text-purple-400/50 hover:text-purple-400 text-sm font-bold transition-colors">⚰️ Cimetière</a>
@@ -233,13 +234,12 @@
 
                 {% if user_bets %}
                 <div class="alert-success p-4 mb-4">
-                    <p class="font-bold">✅ Pari déjà placé pour cette course :</p>
+                    <p class="font-bold">✅ Tu as déjà utilisé ton pari pour cette course :</p>
                     {% for bet in user_bets %}
                     <p class="text-sm mt-1">→ <strong>{{ bet.pig_name }}</strong> — {{ bet.amount }} BG @ x{{ bet.odds_at_bet }}</p>
                     {% endfor %}
                 </div>
-                {% endif %}
-
+                {% else %}
                 <form method="POST" action="/bet" id="bet-form">
                     <input type="hidden" name="race_id" value="{{ next_race.id }}">
                     <input type="hidden" name="pig_name" id="selected-pig-input" value="">
@@ -266,6 +266,8 @@
                         Gain potentiel : <span id="potential-amount" class="text-green-400 font-bold"></span> BG
                     </div>
                 </form>
+                <p class="text-white/30 text-xs font-bold mt-3">Un seul pari par course et par joueur.</p>
+                {% endif %}
             </div>
             {% elif not user %}
             <div class="card p-6 mt-6 text-center">

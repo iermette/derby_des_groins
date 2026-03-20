@@ -118,6 +118,7 @@
             <a href="/mon-cochon" class="text-yellow-400 text-sm font-bold transition-colors">🐷 Mon Cochon</a>
             <a href="/marche" class="text-white/60 hover:text-white text-sm font-bold transition-colors">🏪 Marché</a>
             <a href="/classement" class="text-yellow-400 hover:text-yellow-500 text-sm font-bold transition-colors">🏆 Classement</a>
+            <a href="/profil" class="text-cyan-300/80 hover:text-cyan-200 text-sm font-bold transition-colors">👤 Profil</a>
             <a href="/history" class="text-white/60 hover:text-white text-sm font-bold transition-colors">Historique</a>
             <a href="/legendes-pop" class="text-purple-400 hover:text-purple-300 text-sm font-bold transition-colors">🌟 Pop Cult'</a>
             <a href="/cimetiere" class="text-purple-400/50 hover:text-purple-400 text-sm font-bold transition-colors">⚰️ Cimetière</a>
@@ -147,15 +148,29 @@
 
     <div class="flex items-center justify-between mb-8">
         <h1 class="font-title text-4xl text-white">Mes Champions</h1>
-        {% if pigs_data|length < 2 %}
-        <a href="/adopt-second-pig" class="btn-primary flex items-center gap-2" onclick="return confirm('Adopter un second cochon pour 30 BG ?');">
-            ➕ Adopter un second cochon (30 BG)
+        {% if adoption_cost is not none %}
+        <a href="/adopt-second-pig" class="btn-primary flex items-center gap-2" onclick="return confirm('Adopter {{ 'un cochon de secours' if not pigs_data else 'un second cochon' }} pour {{ '%.0f'|format(adoption_cost) }} BG ?');">
+            ➕ {{ 'Adopter un cochon de secours' if not pigs_data else 'Adopter un second cochon' }} ({{ "%.0f"|format(adoption_cost) }} BG)
         </a>
         {% endif %}
     </div>
 
     <!-- PIGS LIST -->
     <div class="space-y-12">
+        {% if not pigs_data %}
+        <div class="card p-10 text-center max-w-3xl mx-auto">
+            <p class="text-6xl mb-4">🐣</p>
+            <h2 class="font-title text-3xl text-white">L'écurie est vide</h2>
+            <p class="text-white/55 text-sm font-semibold mt-3">
+                {% if active_listing_count > 0 %}
+                Tu n'as plus de cochon actif pour l'instant. {{ active_listing_count }} cochon(s) est/sont encore sur le marché.
+                {% else %}
+                Tes cochons ont quitté la piste. Il faut relancer l'élevage.
+                {% endif %}
+            </p>
+            <p class="text-white/35 text-xs font-bold mt-2">Quand ton solde tombe trop bas, le jeu verse automatiquement une petite prime d'urgence pour t'éviter le soft-lock.</p>
+        </div>
+        {% endif %}
         {% for pd in pigs_data %}
         {% set pig = pd.pig %}
         <div class="grid grid-cols-1 xl:grid-cols-3 gap-8 p-1 relative">
@@ -164,12 +179,15 @@
             <div class="xl:col-span-1">
                 <div class="card p-8 h-full flex flex-col items-center justify-center text-center relative overflow-hidden group">
                     <!-- Sacrifier -->
-                    <a href="/sacrifice-pig?pig_id={{ pig.id }}" 
-                       class="absolute top-4 right-4 text-white/10 hover:text-red-500 transition-colors z-10 p-2"
-                       onclick="return confirm('VEUX-TU VRAIMENT ENVOYER {{ pig.name }} À L\'ABATTOIR ? Cette action est irréversible.');"
-                       title="Envoyer à l'abattoir">
-                       🔪
-                    </a>
+                    <form method="POST" action="/sacrifice-pig" class="absolute top-4 right-4 z-10">
+                        <input type="hidden" name="pig_id" value="{{ pig.id }}">
+                        <button type="submit"
+                            class="text-white/10 hover:text-red-500 transition-colors p-2"
+                            onclick="return confirm('VEUX-TU VRAIMENT ENVOYER {{ pig.name }} À L\'ABATTOIR ? Cette action est irréversible.');"
+                            title="Envoyer à l'abattoir">
+                            🔪
+                        </button>
+                    </form>
 
                     <!-- Background Emoji watermarked -->
                     <div class="absolute -bottom-10 -right-10 text-[120px] opacity-5 pointer-events-none group-hover:scale-110 transition-transform">

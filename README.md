@@ -197,15 +197,17 @@ derby_des_groins/
 
 ## 🔄 Mécanique de jeu
 
-1. Les courses ont lieu **toutes les heures pile** (14h00, 15h00...)
+1. Les courses ont lieu **à l'heure configurée** (par défaut une course quotidienne)
 2. Les cochons des joueurs sont **automatiquement inscrits** si énergie > 20% et satiété > 20%
 3. Les **stats du cochon influencent** ses chances de victoire
 4. L'**École porcine** propose des quiz tactiques avec coût en énergie/satiété, gain de stats/XP et cooldown par cochon
-5. Les paris ferment **30 secondes** avant le départ
-6. Après la course : **XP** selon le classement (1er: 100xp, 2e: 60xp, 3e: 40xp...)
-7. Le vainqueur reçoit des **bonus de stats**
-8. La faim diminue avec le temps — **nourris ton cochon** ou il ne pourra plus courir
-9. L'énergie se régénère naturellement (si bien nourri)
+5. Chaque joueur ne peut placer **qu'un seul pari par course**
+6. Les paris ferment **30 secondes** avant le départ
+7. Après la course : **XP** selon le classement (1er: 100xp, 2e: 60xp, 3e: 40xp...)
+8. Les éleveurs touchent des **récompenses de participation et de podium**, même sans parier
+9. La faim diminue avec le temps — **nourris ton cochon** ou il ne pourra plus courir
+10. Si un joueur tombe vraiment trop bas en caisse, une **prime d'urgence** l'aide à repartir
+11. Le **marché** ne s'ouvre pour un nouveau compte qu'après un peu d'ancienneté ou quelques courses, pour limiter les abus de création de comptes
 
 ---
 

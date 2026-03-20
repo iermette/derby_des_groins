@@ -25,17 +25,24 @@ Entraînez-le régulièrement, envoyez-le à l'école porcine et nourrissez-le p
 ## 3. Les Courses
 - Il y a des courses régulières prévues à heure fixe ou forçables manuellement par l'admin.
 - Chaque cochon inscrit court (y compris les PNJ). 
-- Le gagnant remporte _automatiquement_ une belle somme pour son éleveur.
+- Les éleveurs reçoivent une **prime de participation**, et les meilleurs gagnent un **bonus de podium**.
 
 ## 4. Les Paris
 - Placez vos BitGroins sur les cochons participants (même ceux des autres joueurs !).
-- Selon la cote de chaque cochon, gagnez le pactole si votre chouchou arrive premier. 
+- **Un seul pari par course** est autorisé pour éviter les arbitrages faciles.
+- Selon la cote de chaque cochon, gagnez le pactole si votre chouchou arrive premier.
 
-## 5. Le Marché
+## 5. Survivre sur le Long Terme
+- Un cochon finit par prendre sa retraite ou mourir : il faut donc penser à renouveler son élevage.
+- Si un cochon mis en vente ne trouve pas preneur, il **revient automatiquement** chez son propriétaire.
+- Si vous êtes ruiné, le jeu peut verser une **prime d'urgence** pour éviter de rester bloqué sans solution.
+- Les nouveaux comptes doivent d'abord faire quelques courses, ou attendre un peu, avant de pouvoir utiliser pleinement le **marché**.
+
+## 6. Le Marché
 - Vous pouvez mettre votre cochon en vente aux enchères ou acheter de nouveaux champions.
 - Le marché n'est ouvert que sur certains créneaux définis par l'admin.
 
-## 6. L'Abattoir et le Cimetière
+## 7. L'Abattoir et le Cimetière
 - Les cochons meurent s'ils courent trop ou de vieillesse (sauf certains chanceux).
 - Lorsqu'ils meurent, ils rejoignent **L'Abattoir** et sont transformés en charcuterie (avec description personnalisée).
 - Les **Légendes** (ceux qui ont plus de 3 victoires) ont droit à une place d'honneur au **Cimetière**.
