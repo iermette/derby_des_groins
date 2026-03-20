@@ -3,49 +3,60 @@
 Bienvenue dans le Derby des Groins™.
 
 Ce projet fait suite à une réunion interne dont l’objectif initial était simple :
-améliorer la prise de décision dans des environnements complexes.
+traiter un sujet précis.
 
-Après 1h42 d’échanges, plusieurs constats ont émergé :
-- les décisions humaines peuvent être lentes, biaisées ou dépendantes du contexte
-- les outils existants ajoutent parfois plus de complexité que de clarté
-- certaines situations restent difficilement arbitrables, même avec les meilleurs frameworks
+Après plusieurs tentatives pour trouver un créneau (et 17 messages Teams), une réunion a finalement été organisée.
+
+Elle a duré 1h42.
+
+Plusieurs constats ont émergé :
+- le sujet initial n’a pas été abordé
+- plusieurs sujets non prévus ont été traités en profondeur
+- certaines idées ont semblé, sur le moment, étonnamment pertinentes
+- planifier une décision a pris plus de temps que la décision elle-même
 
 Une proposition a alors été formulée.
 
 Au départ, c’était une blague.
 
-Introduire un système totalement neutre.
+Déléguer la prise de décision à un système sans contrainte d’agenda.
 
 **Les cochons.**
 
 Personne n’a vraiment validé.
 Personne n’a vraiment refusé.
 
-### Plateforme expérimentale de simulation décisionnelle en environnement compétitif
+Et personne n’a relancé le sujet initial.
 
-Chaque entité porcine est élevée, nourrie et entraînée pour évoluer dans un cadre simulé.
+### Plateforme alternative de prise de décision sans réunion ni calendrier
 
-Les performances sont observées.
-Les comportements sont analysés.
+Chaque entité porcine est élevée, nourrie et entraînée pour évoluer dans un environnement compétitif.
 
-Et parfois… des décisions émergent.
+Aucun conflit d’agenda.
+Aucun “je te laisse proposer”.
+Aucun “on se refait un point”.
+
+Les cochons courent.
+**Le plus rapide décide.**
 
 **Fonctionnalités principales :**
-- simulation de scénarios décisionnels complexes
-- observation de comportements non déterministes
-- mise en compétition d’approches alternatives
+- arbitrage instantané sans réunion
+- disponibilité permanente (même le vendredi après-midi)
+- génération d’idées non planifiées mais étonnamment efficaces
 
-> 💡 **Idée originale** : issue d’une discussion interne informelle (proposée par Christophe).
+> 💡 **Idée originale** : apparue au moment exact où tout le monde avait oublié l’objectif de la réunion (proposée par Christophe).
 
-Aujourd’hui, le système existe.
+Aujourd’hui, le système est opérationnel.
 
-Il n’était pas prévu.
+Les décisions sont prises en quelques secondes.
 
-Mais il fonctionne.
+Le sujet initial… sera traité ultérieurement.
 
-Les résultats sont intéressants.
+Les résultats sont concrets.
 
-Ce qui soulève… de nouvelles questions.
+Ce qui pose une vraie question :
+
+**Fallait-il vraiment faire cette réunion ?**
 
 ---
 
