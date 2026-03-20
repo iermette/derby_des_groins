@@ -29,7 +29,6 @@ class User(db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     bets = db.relationship('Bet', backref='user', lazy=True)
-    pigs = db.relationship('Pig', backref='owner', lazy=True)
 
 class Pig(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -1312,6 +1311,52 @@ def admin_force_race():
     return redirect(url_for('admin'))
 
 # ─── API ────────────────────────────────────────────────────────────────────
+
+@app.route('/classement')
+def classement():
+    user = None
+    if 'user_id' in session:
+        user = User.query.get(session['user_id'])
+    
+    all_users = User.query.all()
+    rankings = []
+    
+    for u in all_users:
+        # Calcul des stats
+        total_wins = db.session.query(db.func.sum(Pig.races_won)).filter(Pig.user_id == u.id).scalar() or 0
+        total_races = db.session.query(db.func.sum(Pig.races_entered)).filter(Pig.user_id == u.id).scalar() or 0
+        dead_pigs_count = Pig.query.filter_by(user_id=u.id, is_alive=False).count()
+        win_rate = (total_wins / total_races * 100) if total_races > 0 else 0
+        
+        # Système de trophées
+        trophies = []
+        if u.balance >= 500: trophies.append({'n': 'Crésus', 'e': '💰', 'd': 'Avoir plus de 500 BG'})
+        if total_wins >= 10: trophies.append({'n': 'Légende', 'e': '🏆', 'd': '10 victoires au total'})
+        if dead_pigs_count >= 5: trophies.append({'n': 'Boucher', 'e': '🔪', 'd': '5 cochons à l\'abattoir'})
+        if total_races >= 50: trophies.append({'n': 'Vétéran', 'e': '🎖️', 'd': '50 courses disputées'})
+        
+        rankings.append({
+            'user': u,
+            'total_wins': total_wins,
+            'total_races': total_races,
+            'win_rate': round(win_rate, 1),
+            'dead_count': dead_pigs_count,
+            'trophies': trophies,
+            'score': round(u.balance + (total_wins * 50), 2) # Score arbitraire pour le tri
+        })
+    
+    # Tri par score décroissant
+    rankings.sort(key=lambda x: x['score'], reverse=True)
+    
+    # Données pour les graphiques (Top 5)
+    top_5 = rankings[:5]
+    chart_data = {
+        'labels': [r['user'].username for r in top_5],
+        'balances': [r['user'].balance for r in top_5],
+        'wins': [r['total_wins'] for r in top_5]
+    }
+    
+    return render_template('classement.html', user=user, rankings=rankings, chart_data=chart_data)
 
 @app.route('/legendes-pop')
 def legendes_pop():
