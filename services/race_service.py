@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 import math
 import random
@@ -13,9 +14,61 @@ from extensions import db
 from models import Bet, CoursePlan, Participant, Pig, Race, User
 from race_engine import CourseManager
 
-from helpers import apply_row_lock, get_config
+from helpers import apply_row_lock
 from services.finance_service import credit_user_balance
+from services.game_settings_service import get_game_settings
 from services.pig_service import calculate_pig_power, get_weight_profile, update_pig_state
+
+
+class RacePlanningError(Exception):
+    """Erreur métier levée pendant la planification d'une course."""
+
+
+class PigNotFoundError(RacePlanningError):
+    pass
+
+
+class InvalidRaceSlotError(RacePlanningError):
+    pass
+
+
+class RaceLockedError(RacePlanningError):
+    pass
+
+
+class PigNotRaceReadyError(RacePlanningError):
+    pass
+
+
+class RaceAlreadyJoinedError(RacePlanningError):
+    pass
+
+
+class WeeklyQuotaReachedError(RacePlanningError):
+    pass
+
+
+@dataclass(frozen=True)
+class BetParticipantSnapshot:
+    id: int
+    win_probability: float
+
+    @classmethod
+    def from_source(cls, source):
+        if isinstance(source, dict):
+            source_id = source.get('id', 0)
+            win_probability = source.get('win_probability', 0.0)
+        else:
+            source_id = getattr(source, 'id', 0)
+            win_probability = getattr(source, 'win_probability', 0.0)
+        return cls(id=int(source_id), win_probability=float(win_probability or 0.0))
+
+
+@dataclass(frozen=True)
+class PlannedRaceAction:
+    action: str
+    pig_name: str
+    scheduled_at: datetime
 
 
 def normalize_bet_type(bet_type):
@@ -44,8 +97,13 @@ def format_bet_label(participants):
     return ' -> '.join(participant.name for participant in participants)
 
 
+def _build_bet_participant_snapshots(participants_by_id):
+    return {participant_id: BetParticipantSnapshot.from_source(participant) for participant_id, participant in participants_by_id.items()}
+
+
 def calculate_ordered_finish_probability(participants_by_id, ordered_ids):
-    remaining_probabilities = {participant_id: max(participant.win_probability or 0.0, 0.0) for participant_id, participant in participants_by_id.items()}
+    participant_snapshots = _build_bet_participant_snapshots(participants_by_id)
+    remaining_probabilities = {participant_id: max(participant.win_probability, 0.0) for participant_id, participant in participant_snapshots.items()}
     remaining_total = sum(remaining_probabilities.values())
     if remaining_total <= 0:
         return 0.0
@@ -135,16 +193,67 @@ def get_course_theme(slot_time):
 
 
 def get_next_race_time():
-    race_hour = int(get_config('race_hour', '14'))
-    race_minute = int(get_config('race_minute', '00'))
+    settings = get_game_settings()
     now = datetime.now()
-    today_race = now.replace(hour=race_hour, minute=race_minute, second=0, microsecond=0)
+    today_race = now.replace(hour=settings.race_hour, minute=settings.race_minute, second=0, microsecond=0)
     return today_race + timedelta(days=1) if now >= today_race else today_race
 
 
 def get_upcoming_course_slots(days=30):
     first_slot = get_next_race_time()
     return [first_slot + timedelta(days=offset) for offset in range(days)]
+
+
+def _get_open_race_for_slot(scheduled_at):
+    return Race.query.filter_by(scheduled_at=scheduled_at, status='open').first()
+
+
+def plan_pig_for_race(user_id, pig_id, scheduled_at_raw, strategy):
+    pig = Pig.query.filter_by(id=pig_id, user_id=user_id, is_alive=True).first()
+    if not pig:
+        raise PigNotFoundError("Cochon introuvable pour cette planification.")
+
+    try:
+        scheduled_at = datetime.fromisoformat((scheduled_at_raw or '').strip()).replace(microsecond=0)
+    except ValueError as exc:
+        raise InvalidRaceSlotError("Creneau de course invalide.") from exc
+
+    if scheduled_at <= datetime.now() + timedelta(seconds=30):
+        raise RaceLockedError("Cette course est trop proche pour modifier les inscriptions.")
+
+    open_race = _get_open_race_for_slot(scheduled_at)
+    if open_race and Bet.query.filter_by(race_id=open_race.id).count() > 0:
+        raise RaceLockedError("Cette course est deja verrouillee par des paris. Plus de modification possible.")
+
+    if open_race and (pig.is_injured or pig.energy <= 20 or pig.hunger <= 20):
+        raise PigNotRaceReadyError(f"{pig.name} n'est pas en etat de rejoindre la course ouverte du moment.")
+
+    already_participant = False
+    if open_race:
+        already_participant = Participant.query.filter_by(race_id=open_race.id, pig_id=pig.id).first() is not None
+
+    existing_plan = CoursePlan.query.filter_by(user_id=user_id, pig_id=pig.id, scheduled_at=scheduled_at).first()
+    if existing_plan:
+        db.session.delete(existing_plan)
+        if open_race:
+            populate_race_participants(open_race, respect_course_plans=True, allow_rebuild_if_bets=False, commit=False)
+        db.session.commit()
+        return PlannedRaceAction(action='removed', pig_name=pig.name, scheduled_at=scheduled_at)
+
+    if already_participant:
+        raise RaceAlreadyJoinedError(f"{pig.name} est deja partant sur cette course ouverte.")
+
+    if count_pig_weekly_course_commitments(pig.id, scheduled_at) >= WEEKLY_RACE_QUOTA:
+        raise WeeklyQuotaReachedError(f"{pig.name} a deja atteint son quota hebdomadaire de {WEEKLY_RACE_QUOTA} courses.")
+
+    db.session.add(CoursePlan(user_id=user_id, pig_id=pig.id, scheduled_at=scheduled_at, strategy=int(strategy)))
+    db.session.flush()
+
+    if open_race:
+        populate_race_participants(open_race, respect_course_plans=True, allow_rebuild_if_bets=False, commit=False)
+
+    db.session.commit()
+    return PlannedRaceAction(action='planned', pig_name=pig.name, scheduled_at=scheduled_at)
 
 
 def get_race_ready_pigs():

@@ -1,17 +1,16 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash
 from sqlalchemy.exc import IntegrityError
-from datetime import datetime, timedelta
+from datetime import datetime
 
-from extensions import db
-from models import User, Pig, Race, Participant, Bet, CoursePlan
+from models import User, Race, Participant, Bet
 from data import BET_TYPES, WEEKLY_RACE_QUOTA, WEEKLY_BACON_TICKETS
 from helpers import ensure_next_race, get_user_active_pigs, apply_row_lock
 from services.pig_service import calculate_pig_power, get_weight_profile
 from services.race_service import (
-    count_pig_weekly_course_commitments, build_course_schedule,
-    populate_race_participants, get_user_weekly_bet_count,
-    normalize_bet_type, parse_selection_ids, serialize_selection_ids,
-    format_bet_label, calculate_bet_odds,
+    RacePlanningError, build_course_schedule, calculate_bet_odds,
+    count_pig_weekly_course_commitments, format_bet_label,
+    get_user_weekly_bet_count, normalize_bet_type, parse_selection_ids,
+    plan_pig_for_race, serialize_selection_ids,
 )
 
 race_bp = Blueprint('race', __name__)
@@ -68,60 +67,19 @@ def plan_course():
 
     pig_id = request.form.get('pig_id', type=int)
     scheduled_at_raw = (request.form.get('scheduled_at') or '').strip()
-    pig = Pig.query.filter_by(id=pig_id, user_id=user.id, is_alive=True).first()
-    if not pig:
-        flash("Cochon introuvable pour cette planification.", "error")
-        return redirect(url_for('race.courses'))
-
-    try:
-        scheduled_at = datetime.fromisoformat(scheduled_at_raw).replace(microsecond=0)
-    except ValueError:
-        flash("Creneau de course invalide.", "error")
-        return redirect(url_for('race.courses'))
-
-    if scheduled_at <= datetime.now() + timedelta(seconds=30):
-        flash("Cette course est trop proche pour modifier les inscriptions.", "warning")
-        return redirect(url_for('race.courses'))
-
-    open_race = Race.query.filter_by(scheduled_at=scheduled_at, status='open').first()
-    if open_race and Bet.query.filter_by(race_id=open_race.id).count() > 0:
-        flash("Cette course est deja verrouillee par des paris. Plus de modification possible.", "warning")
-        return redirect(url_for('race.courses'))
-    if open_race and (pig.is_injured or pig.energy <= 20 or pig.hunger <= 20):
-        flash(f"{pig.name} n'est pas en etat de rejoindre la course ouverte du moment.", "warning")
-        return redirect(url_for('race.courses'))
-
-    already_participant = False
-    if open_race:
-        already_participant = Participant.query.filter_by(race_id=open_race.id, pig_id=pig.id).first() is not None
-
-    existing_plan = CoursePlan.query.filter_by(user_id=user.id, pig_id=pig.id, scheduled_at=scheduled_at).first()
-    if existing_plan:
-        db.session.delete(existing_plan)
-        if open_race:
-            populate_race_participants(open_race, respect_course_plans=True, allow_rebuild_if_bets=False, commit=False)
-        db.session.commit()
-        flash(f"📅 {pig.name} est retire du planning du {scheduled_at.strftime('%d/%m %H:%M')}.", "success")
-        return redirect(url_for('race.courses'))
-
-    if already_participant:
-        flash(f"{pig.name} est deja partant sur cette course ouverte.", "warning")
-        return redirect(url_for('race.courses'))
-
-    if count_pig_weekly_course_commitments(pig.id, scheduled_at) >= WEEKLY_RACE_QUOTA:
-        flash(f"{pig.name} a deja atteint son quota hebdomadaire de {WEEKLY_RACE_QUOTA} courses.", "warning")
-        return redirect(url_for('race.courses'))
-
     strategy = request.form.get('strategy', 50, type=int)
 
-    db.session.add(CoursePlan(user_id=user.id, pig_id=pig.id, scheduled_at=scheduled_at, strategy=strategy))
-    db.session.flush()
+    try:
+        action = plan_pig_for_race(user.id, pig_id, scheduled_at_raw, strategy)
+    except RacePlanningError as exc:
+        category = 'error' if 'invalide' in str(exc).lower() or 'introuvable' in str(exc).lower() else 'warning'
+        flash(str(exc), category)
+        return redirect(url_for('race.courses'))
 
-    if open_race:
-        populate_race_participants(open_race, respect_course_plans=True, allow_rebuild_if_bets=False, commit=False)
-
-    db.session.commit()
-    flash(f"📅 {pig.name} est maintenant planifie pour la course du {scheduled_at.strftime('%d/%m %H:%M')}.", "success")
+    if action.action == 'removed':
+        flash(f"📅 {action.pig_name} est retire du planning du {action.scheduled_at.strftime('%d/%m %H:%M')}.", "success")
+    else:
+        flash(f"📅 {action.pig_name} est maintenant planifie pour la course du {action.scheduled_at.strftime('%d/%m %H:%M')}.", "success")
     return redirect(url_for('race.courses'))
 
 

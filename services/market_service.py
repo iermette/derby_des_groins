@@ -12,7 +12,8 @@ from data import (
 from extensions import db
 from models import Auction, BalanceTransaction, GrainMarket, Pig, User
 
-from helpers import apply_row_lock, get_config
+from helpers import apply_row_lock
+from services.game_settings_service import get_game_settings
 from services.finance_service import credit_user_balance
 from services.pig_service import build_unique_pig_name, generate_weight_kg_for_profile
 
@@ -28,35 +29,28 @@ def get_prix_moyen_groin():
 
 
 def get_next_market_time():
-    market_day = int(get_config('market_day', '4'))
-    market_hour = int(get_config('market_hour', '13'))
-    market_minute = int(get_config('market_minute', '45'))
+    settings = get_game_settings()
     now = datetime.now()
-    days_ahead = market_day - now.weekday()
-    if days_ahead < 0 or (days_ahead == 0 and now.hour * 60 + now.minute >= market_hour * 60 + market_minute + int(get_config('market_duration', '120'))):
+    days_ahead = settings.market_day - now.weekday()
+    if days_ahead < 0 or (days_ahead == 0 and now.hour * 60 + now.minute >= settings.market_hour * 60 + settings.market_minute + settings.market_duration):
         days_ahead += 7
-    return now.replace(hour=market_hour, minute=market_minute, second=0, microsecond=0) + timedelta(days=days_ahead)
+    return now.replace(hour=settings.market_hour, minute=settings.market_minute, second=0, microsecond=0) + timedelta(days=days_ahead)
 
 
 def is_market_open():
-    market_day = int(get_config('market_day', '4'))
-    market_hour = int(get_config('market_hour', '13'))
-    market_minute = int(get_config('market_minute', '45'))
-    duration = int(get_config('market_duration', '120'))
+    settings = get_game_settings()
     now = datetime.now()
-    if now.weekday() != market_day:
+    if now.weekday() != settings.market_day:
         return False
-    market_start = now.replace(hour=market_hour, minute=market_minute, second=0, microsecond=0)
-    return market_start <= now <= market_start + timedelta(minutes=duration)
+    market_start = now.replace(hour=settings.market_hour, minute=settings.market_minute, second=0, microsecond=0)
+    return market_start <= now <= market_start + timedelta(minutes=settings.market_duration)
 
 
 def get_market_close_time():
-    market_hour = int(get_config('market_hour', '13'))
-    market_minute = int(get_config('market_minute', '45'))
-    duration = int(get_config('market_duration', '120'))
+    settings = get_game_settings()
     now = datetime.now()
-    market_start = now.replace(hour=market_hour, minute=market_minute, second=0, microsecond=0)
-    return market_start + timedelta(minutes=duration)
+    market_start = now.replace(hour=settings.market_hour, minute=settings.market_minute, second=0, microsecond=0)
+    return market_start + timedelta(minutes=settings.market_duration)
 
 
 def generate_auction_pig():

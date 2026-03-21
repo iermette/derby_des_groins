@@ -6,10 +6,11 @@ from extensions import db
 from models import User, Pig, Auction
 from data import RARITIES, PIG_ORIGINS, JOURS_FR, DEFAULT_PIG_WEIGHT_KG
 from helpers import (
-    get_market_unlock_progress, get_market_lock_reason, get_config,
+    get_market_unlock_progress, get_market_lock_reason,
     is_market_open, get_next_market_time, get_market_close_time,
     get_prix_moyen_groin, apply_row_lock,
 )
+from services.game_settings_service import get_game_settings
 
 market_bp = Blueprint('market', __name__)
 
@@ -30,10 +31,11 @@ def marche():
             market_access = get_market_unlock_progress(user)[0]
             market_lock_reason = get_market_lock_reason(user)
 
+    settings = get_game_settings()
     market_open = is_market_open()
     next_market = get_next_market_time()
-    market_day_name = JOURS_FR[int(get_config('market_day', '4'))]
-    market_time = f"{get_config('market_hour', '13')}h{get_config('market_minute', '45')}"
+    market_day_name = JOURS_FR[settings.market_day]
+    market_time = f"{settings.market_hour}h{settings.market_minute:02d}"
     prix_groin = get_prix_moyen_groin()
 
     return render_template('marche.html',

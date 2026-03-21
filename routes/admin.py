@@ -6,9 +6,10 @@ from extensions import db
 from models import User, Race, Pig, CerealItem, TrainingItem, SchoolLessonItem
 from data import JOURS_FR
 from helpers import (
-    get_config, set_config, populate_race_participants, run_race_if_needed,
+    set_config, populate_race_participants, run_race_if_needed,
     get_all_cereals_dict, get_all_trainings_dict, get_all_school_lessons_dict,
 )
+from services.game_settings_service import get_game_settings
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -28,18 +29,19 @@ def admin():
     next_race = Race.query.filter(Race.status == 'open').order_by(Race.scheduled_at).first()
     recent_races = Race.query.filter_by(status='finished').order_by(Race.finished_at.desc()).limit(10).all()
 
+    settings = get_game_settings()
     return render_template('admin.html',
         user=user, users=users, pigs=pigs, upcoming_races=upcoming_races,
         next_race=next_race, recent_races=recent_races,
         config={
-            'race_hour': get_config('race_hour', '14'),
-            'race_minute': get_config('race_minute', '00'),
-            'market_day': get_config('market_day', '4'),
-            'market_hour': get_config('market_hour', '13'),
-            'market_minute': get_config('market_minute', '45'),
-            'market_duration': get_config('market_duration', '120'),
-            'min_real_participants': get_config('min_real_participants', '2'),
-            'empty_race_mode': get_config('empty_race_mode', 'fill'),
+            'race_hour': settings.race_hour,
+            'race_minute': settings.race_minute,
+            'market_day': settings.market_day,
+            'market_hour': settings.market_hour,
+            'market_minute': settings.market_minute,
+            'market_duration': settings.market_duration,
+            'min_real_participants': settings.min_real_participants,
+            'empty_race_mode': settings.empty_race_mode,
         },
         jours=JOURS_FR
     )
