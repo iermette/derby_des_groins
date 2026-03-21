@@ -8,6 +8,7 @@ from extensions import db
 from models import (
     GameConfig, User, Pig, Race, Participant, Bet,
     BalanceTransaction, CoursePlan, Auction, GrainMarket,
+    CerealItem, TrainingItem, SchoolLessonItem,
 )
 from data import (
     PIGS, PIG_ORIGINS, PIG_EMOJIS, PIG_NAME_PREFIXES, PIG_NAME_SUFFIXES, PRELOADED_PIG_NAMES,
@@ -24,8 +25,7 @@ from data import (
     BOURSE_GRID_SIZE, BOURSE_GRID_VALUES, BOURSE_DEFAULT_POS,
     BOURSE_BLOCK_MIN, BOURSE_BLOCK_MAX, BOURSE_SURCHARGE_FACTOR,
     BOURSE_MOVEMENT_DIVISOR, BOURSE_MIN_MOVEMENT,
-    BOURSE_GRAIN_LAYOUT,
-    CEREALS,
+    BOURSE_GRAIN_LAYOUT, CEREALS,
 )
 from race_engine import CourseManager
 
@@ -1713,7 +1713,8 @@ def get_bourse_cereals(market, feeding_multiplier=1.0):
     for (dx, dy), cereal_key in BOURSE_GRAIN_LAYOUT.items():
         if cereal_key is None:
             continue
-        cer = CEREALS[cereal_key]
+        cereals = get_cereals_dict()
+        cer = cereals[cereal_key]
         gx, gy = get_grain_grid_pos(market, dx, dy)
         surcharge = surcharges[cereal_key]
         c = dict(cer)
@@ -1754,8 +1755,9 @@ def get_bourse_grid_data(market):
             is_block = (abs(x - bx) <= 1 and abs(y - by) <= 1)
             is_center = (x == bx and y == by)
             grain_key = block_grains.get((x, y))  # None si hors bloc ou case vide
-            grain_emoji = CEREALS[grain_key]['emoji'] if grain_key and grain_key in CEREALS else None
-            grain_name = CEREALS[grain_key]['name'] if grain_key and grain_key in CEREALS else None
+            _cereals = get_cereals_dict()
+            grain_emoji = _cereals[grain_key]['emoji'] if grain_key and grain_key in _cereals else None
+            grain_name = _cereals[grain_key]['name'] if grain_key and grain_key in _cereals else None
 
             row.append({
                 'x': x, 'y': y,
@@ -1771,3 +1773,64 @@ def get_bourse_grid_data(market):
             })
         grid.append(row)
     return grid
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Données de jeu dynamiques (DB) — remplace les constantes data.py
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _is_available(item):
+    """Vérifie qu'un item est actif et dans sa fenêtre de disponibilité."""
+    if not item.is_active:
+        return False
+    now = datetime.utcnow()
+    if item.available_from and now < item.available_from:
+        return False
+    if item.available_until and now > item.available_until:
+        return False
+    return True
+
+
+def get_cereals_dict():
+    """Retourne un dict {key: {...}} identique à l'ancien data.CEREALS, depuis la DB.
+    Fallback sur data.CEREALS si la table est vide (1er lancement)."""
+    items = CerealItem.query.order_by(CerealItem.sort_order, CerealItem.id).all()
+    if not items:
+        return CEREALS  # fallback constantes
+    return {c.key: c.to_dict() for c in items if _is_available(c)}
+
+
+def get_trainings_dict():
+    """Retourne un dict {key: {...}} identique à l'ancien data.TRAININGS, depuis la DB."""
+    from data import TRAININGS
+    items = TrainingItem.query.order_by(TrainingItem.sort_order, TrainingItem.id).all()
+    if not items:
+        return TRAININGS
+    return {t.key: t.to_dict() for t in items if _is_available(t)}
+
+
+def get_school_lessons_dict():
+    """Retourne un dict {key: {...}} identique à l'ancien data.SCHOOL_LESSONS, depuis la DB."""
+    from data import SCHOOL_LESSONS
+    items = SchoolLessonItem.query.order_by(SchoolLessonItem.sort_order, SchoolLessonItem.id).all()
+    if not items:
+        return SCHOOL_LESSONS
+    return {l.key: l.to_dict() for l in items if _is_available(l)}
+
+
+def get_all_cereals_dict():
+    """Comme get_cereals_dict() mais inclut les items inactifs (pour l'admin)."""
+    items = CerealItem.query.order_by(CerealItem.sort_order, CerealItem.id).all()
+    return {c.key: c for c in items}
+
+
+def get_all_trainings_dict():
+    """Comme get_trainings_dict() mais inclut les items inactifs (pour l'admin)."""
+    items = TrainingItem.query.order_by(TrainingItem.sort_order, TrainingItem.id).all()
+    return {t.key: t for t in items}
+
+
+def get_all_school_lessons_dict():
+    """Comme get_school_lessons_dict() mais inclut les items inactifs (pour l'admin)."""
+    items = SchoolLessonItem.query.order_by(SchoolLessonItem.sort_order, SchoolLessonItem.id).all()
+    return {l.key: l for l in items}
