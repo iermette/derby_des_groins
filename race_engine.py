@@ -2,10 +2,32 @@ import random
 import json
 import math
 
+from data import (
+    RACE_MAX_TURNS,
+    RACE_BASE_SPEED_VIT_MULT, RACE_BASE_SPEED_CONSTANT, RACE_MIN_FINAL_SPEED,
+    RACE_STRATEGY_NEUTRAL, RACE_STRATEGY_SPEED_FACTOR,
+    RACE_STRATEGY_FATIGUE_BASE, RACE_STRATEGY_FATIGUE_DIVISOR,
+    RACE_FATIGUE_SPEED_PENALTY_FLOOR, RACE_FATIGUE_SPEED_PENALTY_DIVISOR,
+    RACE_ECONOMY_THRESHOLD, RACE_ECONOMY_FATIGUE_RECOVERY,
+    RACE_MONTEE_VIT_MULT, RACE_MONTEE_FORCE_MULT, RACE_MONTEE_TERRAIN_MOD,
+    RACE_DESCENTE_TERRAIN_MOD, RACE_DESCENTE_STUMBLE_AGI_REF,
+    RACE_DESCENTE_STUMBLE_AGI_DIV, RACE_DESCENTE_STUMBLE_CHANCE_DIV,
+    RACE_STUMBLE_SPEED_MULT,
+    RACE_VIRAGE_VIT_MULT, RACE_VIRAGE_AGI_MULT,
+    RACE_VIRAGE_TERRAIN_MOD, RACE_BOUE_TERRAIN_MOD,
+    RACE_DRAFT_MIN_DIST, RACE_DRAFT_MAX_DIST,
+    RACE_DRAFT_BASE_CHANCE, RACE_DRAFT_STRATEGY_FACTOR, RACE_DRAFT_SPEED_BONUS,
+    RACE_VARIANCE_MIN, RACE_VARIANCE_MAX,
+)
+
+
 class CourseManager:
     """
     Simulateur de course de cochons 'Derby des Groins'
     Inspiré par le système tactique de 'Flamme Rouge'.
+
+    Toutes les constantes d'équilibrage sont définies dans data.py
+    (préfixe RACE_*) pour faciliter le tuning.
     """
 
     def __init__(self, participants, segments):
@@ -33,9 +55,9 @@ class CourseManager:
                 'has_draft': False,
                 'is_finished': False,
                 'finish_time': None,
-                'stumbled': False, # For descent events
+                'stumbled': False,
             })
-        
+
         self.segments = segments
         self.total_length = sum(s['length'] for s in segments)
         self.history = []
@@ -43,11 +65,11 @@ class CourseManager:
 
     def run(self):
         """Lance la simulation complète."""
-        while not all(p['is_finished'] for p in self.participants) and self.current_turn < 500:
+        while not all(p['is_finished'] for p in self.participants) and self.current_turn < RACE_MAX_TURNS:
             self.current_turn += 1
             self.simulate_turn()
             self.record_history()
-        
+
         return self.history
 
     def simulate_turn(self):
@@ -55,7 +77,7 @@ class CourseManager:
         for p in self.participants:
             if p['is_finished']:
                 continue
-            
+
             # Find current segment
             temp_dist = 0
             current_seg = self.segments[-1]
@@ -64,26 +86,23 @@ class CourseManager:
                 if p['distance'] < temp_dist:
                     current_seg = seg
                     break
-            
+
             progression = self.calculate_progression(p, current_seg)
             p['distance'] += progression
-            
+
             if p['distance'] >= self.total_length:
                 p['is_finished'] = True
                 p['distance'] = self.total_length
                 p['finish_time'] = self.current_turn
 
         # Calculate Aspiration (Drafting) for next turn
-        # Sorting by distance desc
         sorted_pigs = sorted(self.participants, key=lambda x: x['distance'], reverse=True)
         for i in range(len(sorted_pigs)):
-            sorted_pigs[i]['has_draft'] = False # Reset
-            if i > 0: # Not the leader
-                # If close to the pig ahead (X = 3 units)
+            sorted_pigs[i]['has_draft'] = False
+            if i > 0:
                 dist_diff = sorted_pigs[i-1]['distance'] - sorted_pigs[i]['distance']
-                if 0.5 < dist_diff < 4.0:
-                    # Strategy affects drafting: Economy increases chance
-                    draft_chance = 0.7 + (100 - sorted_pigs[i]['strategy']) * 0.003
+                if RACE_DRAFT_MIN_DIST < dist_diff < RACE_DRAFT_MAX_DIST:
+                    draft_chance = RACE_DRAFT_BASE_CHANCE + (100 - sorted_pigs[i]['strategy']) * RACE_DRAFT_STRATEGY_FACTOR
                     if random.random() < draft_chance:
                         sorted_pigs[i]['has_draft'] = True
 
@@ -98,65 +117,58 @@ class CourseManager:
         chance = (p['intelligence'] + p['moral']) / 2.0
 
         # 1. Strategy Impact
-        # High attack (100) = +25% base speed, +100% fatigue gain, -20% agi
-        # Economy (0) = -15% base speed, -50% fatigue gain (or slight recovery), +Drafting
-        strat_speed_mod = 1.0 + (strat - 50) * 0.005 # 50 is neutral (1.0)
-        fatigue_gain = 1.0 + (strat / 50.0) # 50 = 2.0, 100 = 3.0, 0 = 1.0
-        
+        strat_speed_mod = 1.0 + (strat - RACE_STRATEGY_NEUTRAL) * RACE_STRATEGY_SPEED_FACTOR
+        fatigue_gain = RACE_STRATEGY_FATIGUE_BASE + (strat / RACE_STRATEGY_FATIGUE_DIVISOR)
+
         # 2. Fatigue Malus
-        # If fatigue > endurance, speed drops prop to excess
         speed_penalty = 1.0
         if p['fatigue'] > end:
             excess = p['fatigue'] - end
-            speed_penalty = max(0.4, 1.0 - (excess / 100.0))
-        
+            speed_penalty = max(RACE_FATIGUE_SPEED_PENALTY_FLOOR, 1.0 - (excess / RACE_FATIGUE_SPEED_PENALTY_DIVISOR))
+
         # 3. Base Speed Calculation
-        base_speed = (vit * 0.2) + 2.0 # Raw speed value around 4-6
-        
+        base_speed = (vit * RACE_BASE_SPEED_VIT_MULT) + RACE_BASE_SPEED_CONSTANT
+
         # 4. Terrain Adaptation
         terrain_mod = 1.0
         stumble_roll = False
-        
+
         if segment['type'] == 'MONTEE':
-            # Force replaces 50% of vitesse impact
-            base_speed = (vit * 0.1 + frc * 0.1) + 2.0
-            terrain_mod = 0.8 # Slower in hills
+            base_speed = (vit * RACE_MONTEE_VIT_MULT + frc * RACE_MONTEE_FORCE_MULT) + RACE_BASE_SPEED_CONSTANT
+            terrain_mod = RACE_MONTEE_TERRAIN_MOD
         elif segment['type'] == 'DESCENTE':
-            terrain_mod = 1.4
-            # Risk of stumbling if low agi
-            risk = max(0, (40 - agi) / 200.0) - (chance / 500.0)
+            terrain_mod = RACE_DESCENTE_TERRAIN_MOD
+            risk = max(0, (RACE_DESCENTE_STUMBLE_AGI_REF - agi) / RACE_DESCENTE_STUMBLE_AGI_DIV) - (chance / RACE_DESCENTE_STUMBLE_CHANCE_DIV)
             if random.random() < risk:
                 stumble_roll = True
         elif segment['type'] in ['VIRAGE', 'BOUE']:
-            # Agilité is predominant
-            base_speed = (vit * 0.05 + agi * 0.15) + 2.0
-            terrain_mod = 0.7 if segment['type'] == 'BOUE' else 0.9
+            base_speed = (vit * RACE_VIRAGE_VIT_MULT + agi * RACE_VIRAGE_AGI_MULT) + RACE_BASE_SPEED_CONSTANT
+            terrain_mod = RACE_BOUE_TERRAIN_MOD if segment['type'] == 'BOUE' else RACE_VIRAGE_TERRAIN_MOD
 
         # 5. Final Speed for this turn
         final_speed = base_speed * strat_speed_mod * speed_penalty * terrain_mod
-        
+
         # 6. Apply stumble
         if stumble_roll:
-            final_speed *= 0.3
+            final_speed *= RACE_STUMBLE_SPEED_MULT
             p['stumbled'] = True
         else:
             p['stumbled'] = False
 
         # 7. Drafting Bonus
         if p['has_draft'] and not p['is_finished']:
-            final_speed += 0.8 # Nerfed slipstream boost
-        
+            final_speed += RACE_DRAFT_SPEED_BONUS
+
         # 8. Accumulate Fatigue
-        # Economy (strat < 30) recovers a bit of fatigue
-        if strat < 25:
-            p['fatigue'] = max(0.0, p['fatigue'] - 0.1)
+        if strat < RACE_ECONOMY_THRESHOLD:
+            p['fatigue'] = max(0.0, p['fatigue'] - RACE_ECONOMY_FATIGUE_RECOVERY)
         else:
             p['fatigue'] += fatigue_gain
-            
+
         # Variance
-        final_speed *= random.uniform(0.95, 1.05)
-        
-        return max(0.5, final_speed)
+        final_speed *= random.uniform(RACE_VARIANCE_MIN, RACE_VARIANCE_MAX)
+
+        return max(RACE_MIN_FINAL_SPEED, final_speed)
 
     def record_history(self):
         turn_data = {

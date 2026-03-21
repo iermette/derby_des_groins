@@ -402,6 +402,61 @@ PIG_TYPING_WORDS = [
 PIG_COURSE_SEGMENT_TYPES = ['PLAT', 'MONTEE', 'DESCENTE', 'VIRAGE', 'BOUE']
 
 # ---------------------------------------------------------------------------
+# Moteur de course -- constantes d'equilibrage (race_engine.py)
+# ---------------------------------------------------------------------------
+# Toutes les "magic numbers" sont ici pour faciliter le tuning sans toucher
+# au code algorithmique.
+
+# Limite de tours pour eviter une boucle infinie
+RACE_MAX_TURNS = 500
+
+# -- Vitesse de base --
+RACE_BASE_SPEED_VIT_MULT = 0.2       # coefficient de vitesse dans base_speed (plat)
+RACE_BASE_SPEED_CONSTANT = 2.0       # plancher additif de base_speed
+RACE_MIN_FINAL_SPEED = 0.5           # vitesse minimale garantie par tour
+
+# -- Strategie --
+RACE_STRATEGY_NEUTRAL = 50           # valeur neutre (pas de bonus/malus)
+RACE_STRATEGY_SPEED_FACTOR = 0.005   # impact de la strategie sur la vitesse par point
+RACE_STRATEGY_FATIGUE_BASE = 1.0     # base de gain de fatigue
+RACE_STRATEGY_FATIGUE_DIVISOR = 50.0 # diviseur pour le calcul du gain fatigue
+
+# -- Fatigue --
+RACE_FATIGUE_SPEED_PENALTY_FLOOR = 0.4    # malus de vitesse minimum (40% de speed restant)
+RACE_FATIGUE_SPEED_PENALTY_DIVISOR = 100.0  # diviseur pour le calcul du malus
+RACE_ECONOMY_THRESHOLD = 25               # strat en dessous de ce seuil = mode economie
+RACE_ECONOMY_FATIGUE_RECOVERY = 0.1       # recuperation de fatigue par tour en mode economie
+
+# -- Terrain : MONTEE --
+RACE_MONTEE_VIT_MULT = 0.1           # part de vitesse en montee
+RACE_MONTEE_FORCE_MULT = 0.1         # part de force en montee
+RACE_MONTEE_TERRAIN_MOD = 0.8        # modificateur terrain montee
+
+# -- Terrain : DESCENTE --
+RACE_DESCENTE_TERRAIN_MOD = 1.4      # modificateur terrain descente
+RACE_DESCENTE_STUMBLE_AGI_REF = 40   # seuil d'agilite pour risque de chute
+RACE_DESCENTE_STUMBLE_AGI_DIV = 200.0  # diviseur risque agilite
+RACE_DESCENTE_STUMBLE_CHANCE_DIV = 500.0  # diviseur chance (reduit le risque)
+RACE_STUMBLE_SPEED_MULT = 0.3       # multiplicateur vitesse en cas de chute
+
+# -- Terrain : VIRAGE / BOUE --
+RACE_VIRAGE_VIT_MULT = 0.05          # part de vitesse en virage/boue
+RACE_VIRAGE_AGI_MULT = 0.15          # part d'agilite en virage/boue
+RACE_VIRAGE_TERRAIN_MOD = 0.9        # modificateur terrain virage
+RACE_BOUE_TERRAIN_MOD = 0.7          # modificateur terrain boue
+
+# -- Aspiration (Drafting) --
+RACE_DRAFT_MIN_DIST = 0.5            # distance min pour declencher l'aspiration
+RACE_DRAFT_MAX_DIST = 4.0            # distance max pour declencher l'aspiration
+RACE_DRAFT_BASE_CHANCE = 0.7         # probabilite de base d'aspiration
+RACE_DRAFT_STRATEGY_FACTOR = 0.003   # bonus de chance par point d'economie
+RACE_DRAFT_SPEED_BONUS = 0.8         # boost de vitesse en aspiration
+
+# -- Variance --
+RACE_VARIANCE_MIN = 0.95             # borne basse du facteur aleatoire
+RACE_VARIANCE_MAX = 1.05             # borne haute du facteur aleatoire
+
+# ---------------------------------------------------------------------------
 # Bourse aux Grains -- marche dynamique de cereales
 # ---------------------------------------------------------------------------
 # Grille 7x7 avec valeurs symetriques : le centre (indice 3) vaut 0.
