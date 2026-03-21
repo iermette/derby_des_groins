@@ -32,10 +32,12 @@ def courses():
     pigs_data = []
     for pig in pigs:
         pig.update_vitals()
+        weekly_commitments = count_pig_weekly_course_commitments(pig.id, datetime.now())
         pigs_data.append({
             'pig': pig,
             'power': round(calculate_pig_power(pig), 1),
-            'weekly_commitments': count_pig_weekly_course_commitments(pig.id, datetime.now()),
+            'weekly_commitments': weekly_commitments,
+            'weekly_remaining': max(0, WEEKLY_RACE_QUOTA - weekly_commitments),
             'weight_profile': get_weight_profile(pig),
         })
 
