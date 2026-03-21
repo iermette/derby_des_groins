@@ -1417,11 +1417,11 @@ def run_race_if_needed():
         race.replay_json = manager.to_json()
 
         # Determine order from finish_time and distance
-        final_pigs = sorted(manager.participants, key=lambda x: (x['finish_time'] or 9999, -x['distance']))
+        final_pigs = sorted(manager.participants, key=lambda x: (x.finish_time or 9999, -x.distance))
         
         order = []
         for fp in final_pigs:
-            participant = participants_by_id.get(fp['id'])
+            participant = participants_by_id.get(fp.id)
             if participant:
                 order.append(participant)
 

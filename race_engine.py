@@ -1,6 +1,8 @@
 import random
 import json
 import math
+from dataclasses import dataclass, field, asdict
+from typing import Optional
 
 from data import (
     RACE_MAX_TURNS,
@@ -21,6 +23,59 @@ from data import (
 )
 
 
+@dataclass
+class RaceParticipant:
+    """Représentation typée d'un cochon en course.
+
+    Utilisée en interne par CourseManager à la place d'un dictionnaire brut.
+    Les attributs de stats sont en lecture seule pendant la course ; seuls
+    distance, fatigue, has_draft, is_finished, finish_time et stumbled
+    sont mutés par le moteur.
+    """
+    id: int
+    name: str
+    emoji: str
+    # Stats de course (copiées depuis le modèle Pig ou un dict)
+    vitesse: float = 10.0
+    endurance: float = 10.0
+    force: float = 10.0
+    agilite: float = 10.0
+    intelligence: float = 10.0
+    moral: float = 10.0
+    strategy: int = 50
+    # État mutable pendant la simulation
+    distance: float = 0.0
+    fatigue: float = 0.0
+    has_draft: bool = False
+    is_finished: bool = False
+    finish_time: Optional[int] = None
+    stumbled: bool = False
+
+    @classmethod
+    def from_source(cls, source) -> 'RaceParticipant':
+        """Construit un RaceParticipant depuis un objet SQLAlchemy (Pig/Participant)
+        ou un dictionnaire brut. Gère les deux cas de manière transparente."""
+        def _get(key, default=10):
+            if hasattr(source, key):
+                return getattr(source, key)
+            if isinstance(source, dict):
+                return source.get(key, default)
+            return default
+
+        return cls(
+            id=_get('id', 0),
+            name=_get('name', 'Inconnu'),
+            emoji=_get('emoji', '🐷'),
+            vitesse=float(_get('vitesse', 10)),
+            endurance=float(_get('endurance', 10)),
+            force=float(_get('force', 10)),
+            agilite=float(_get('agilite', 10)),
+            intelligence=float(_get('intelligence', 10)),
+            moral=float(_get('moral', 10)),
+            strategy=int(_get('strategy', 50)),
+        )
+
+
 class CourseManager:
     """
     Simulateur de course de cochons 'Derby des Groins'
@@ -28,44 +83,25 @@ class CourseManager:
 
     Toutes les constantes d'équilibrage sont définies dans data.py
     (préfixe RACE_*) pour faciliter le tuning.
+    Les participants sont des instances de RaceParticipant (dataclass).
     """
 
     def __init__(self, participants, segments):
         """
-        :param participants: Liste d'objets ou dicts contenant les stats des cochons.
-        Chaque participant doit avoir id, name, emoji, vitesse, endurance, force, agilite, intelligence, moral, strategy.
+        :param participants: Liste d'objets (Pig, Participant) ou dicts.
         :param segments: Liste de dicts {'type': 'PLAT', 'length': 100}
         """
-        self.participants = []
-        for p in participants:
-            # Map stats from DB model or dict
-            self.participants.append({
-                'id': p.id if hasattr(p, 'id') else p.get('id'),
-                'name': p.name if hasattr(p, 'name') else p.get('name'),
-                'emoji': p.emoji if hasattr(p, 'emoji') else p.get('emoji'),
-                'vitesse': p.vitesse if hasattr(p, 'vitesse') else p.get('vitesse', 10),
-                'endurance': p.endurance if hasattr(p, 'endurance') else p.get('endurance', 10),
-                'force': p.force if hasattr(p, 'force') else p.get('force', 10),
-                'agilite': p.agilite if hasattr(p, 'agilite') else p.get('agilite', 10),
-                'intelligence': p.intelligence if hasattr(p, 'intelligence') else p.get('intelligence', 10),
-                'moral': p.moral if hasattr(p, 'moral') else p.get('moral', 10),
-                'strategy': p.strategy if hasattr(p, 'strategy') else p.get('strategy', 50),
-                'distance': 0.0,
-                'fatigue': 0.0,
-                'has_draft': False,
-                'is_finished': False,
-                'finish_time': None,
-                'stumbled': False,
-            })
-
+        self.participants: list[RaceParticipant] = [
+            RaceParticipant.from_source(p) for p in participants
+        ]
         self.segments = segments
         self.total_length = sum(s['length'] for s in segments)
-        self.history = []
-        self.current_turn = 0
+        self.history: list[dict] = []
+        self.current_turn: int = 0
 
     def run(self):
         """Lance la simulation complète."""
-        while not all(p['is_finished'] for p in self.participants) and self.current_turn < RACE_MAX_TURNS:
+        while not all(p.is_finished for p in self.participants) and self.current_turn < RACE_MAX_TURNS:
             self.current_turn += 1
             self.simulate_turn()
             self.record_history()
@@ -73,9 +109,8 @@ class CourseManager:
         return self.history
 
     def simulate_turn(self):
-        # Determine current segment for each pig
         for p in self.participants:
-            if p['is_finished']:
+            if p.is_finished:
                 continue
 
             # Find current segment
@@ -83,38 +118,36 @@ class CourseManager:
             current_seg = self.segments[-1]
             for seg in self.segments:
                 temp_dist += seg['length']
-                if p['distance'] < temp_dist:
+                if p.distance < temp_dist:
                     current_seg = seg
                     break
 
             progression = self.calculate_progression(p, current_seg)
-            p['distance'] += progression
+            p.distance += progression
 
-            if p['distance'] >= self.total_length:
-                p['is_finished'] = True
-                p['distance'] = self.total_length
-                p['finish_time'] = self.current_turn
+            if p.distance >= self.total_length:
+                p.is_finished = True
+                p.distance = self.total_length
+                p.finish_time = self.current_turn
 
         # Calculate Aspiration (Drafting) for next turn
-        sorted_pigs = sorted(self.participants, key=lambda x: x['distance'], reverse=True)
+        sorted_pigs = sorted(self.participants, key=lambda x: x.distance, reverse=True)
         for i in range(len(sorted_pigs)):
-            sorted_pigs[i]['has_draft'] = False
+            sorted_pigs[i].has_draft = False
             if i > 0:
-                dist_diff = sorted_pigs[i-1]['distance'] - sorted_pigs[i]['distance']
+                dist_diff = sorted_pigs[i-1].distance - sorted_pigs[i].distance
                 if RACE_DRAFT_MIN_DIST < dist_diff < RACE_DRAFT_MAX_DIST:
-                    draft_chance = RACE_DRAFT_BASE_CHANCE + (100 - sorted_pigs[i]['strategy']) * RACE_DRAFT_STRATEGY_FACTOR
+                    draft_chance = RACE_DRAFT_BASE_CHANCE + (100 - sorted_pigs[i].strategy) * RACE_DRAFT_STRATEGY_FACTOR
                     if random.random() < draft_chance:
-                        sorted_pigs[i]['has_draft'] = True
+                        sorted_pigs[i].has_draft = True
 
-    def calculate_progression(self, p, segment):
-        # Base stats
-        vit = p['vitesse']
-        end = p['endurance']
-        frc = p['force']
-        agi = p['agilite']
-        strat = p['strategy']
-        # Chance proxy: Average of intelligence and moral
-        chance = (p['intelligence'] + p['moral']) / 2.0
+    def calculate_progression(self, p: RaceParticipant, segment: dict) -> float:
+        vit = p.vitesse
+        end = p.endurance
+        frc = p.force
+        agi = p.agilite
+        strat = p.strategy
+        chance = (p.intelligence + p.moral) / 2.0
 
         # 1. Strategy Impact
         strat_speed_mod = 1.0 + (strat - RACE_STRATEGY_NEUTRAL) * RACE_STRATEGY_SPEED_FACTOR
@@ -122,8 +155,8 @@ class CourseManager:
 
         # 2. Fatigue Malus
         speed_penalty = 1.0
-        if p['fatigue'] > end:
-            excess = p['fatigue'] - end
+        if p.fatigue > end:
+            excess = p.fatigue - end
             speed_penalty = max(RACE_FATIGUE_SPEED_PENALTY_FLOOR, 1.0 - (excess / RACE_FATIGUE_SPEED_PENALTY_DIVISOR))
 
         # 3. Base Speed Calculation
@@ -151,19 +184,19 @@ class CourseManager:
         # 6. Apply stumble
         if stumble_roll:
             final_speed *= RACE_STUMBLE_SPEED_MULT
-            p['stumbled'] = True
+            p.stumbled = True
         else:
-            p['stumbled'] = False
+            p.stumbled = False
 
         # 7. Drafting Bonus
-        if p['has_draft'] and not p['is_finished']:
+        if p.has_draft and not p.is_finished:
             final_speed += RACE_DRAFT_SPEED_BONUS
 
         # 8. Accumulate Fatigue
         if strat < RACE_ECONOMY_THRESHOLD:
-            p['fatigue'] = max(0.0, p['fatigue'] - RACE_ECONOMY_FATIGUE_RECOVERY)
+            p.fatigue = max(0.0, p.fatigue - RACE_ECONOMY_FATIGUE_RECOVERY)
         else:
-            p['fatigue'] += fatigue_gain
+            p.fatigue += fatigue_gain
 
         # Variance
         final_speed *= random.uniform(RACE_VARIANCE_MIN, RACE_VARIANCE_MAX)
@@ -173,18 +206,19 @@ class CourseManager:
     def record_history(self):
         turn_data = {
             'turn': self.current_turn,
-            'pigs': []
+            'pigs': [
+                {
+                    'id': p.id,
+                    'name': p.name,
+                    'distance': round(p.distance, 2),
+                    'fatigue': round(p.fatigue, 1),
+                    'is_finished': p.is_finished,
+                    'stumbled': p.stumbled,
+                    'has_draft': p.has_draft,
+                }
+                for p in self.participants
+            ],
         }
-        for p in self.participants:
-            turn_data['pigs'].append({
-                'id': p['id'],
-                'name': p['name'],
-                'distance': round(p['distance'], 2),
-                'fatigue': round(p['fatigue'], 1),
-                'is_finished': p['is_finished'],
-                'stumbled': p['stumbled'],
-                'has_draft': p['has_draft']
-            })
         self.history.append(turn_data)
 
     def to_json(self):
