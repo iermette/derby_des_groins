@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import datetime
 import math
 import random
@@ -14,6 +15,30 @@ from extensions import db
 from models import Auction, Pig
 
 from helpers import calculate_weekend_truce_hours
+
+
+@dataclass(frozen=True)
+class PigHeritageSnapshot:
+    races_won: int
+    level: int
+    rarity: str
+    lineage_boost: float
+
+    @classmethod
+    def from_source(cls, pig):
+        if isinstance(pig, dict):
+            return cls(
+                races_won=int(pig.get('races_won') or 0),
+                level=max(1, int(pig.get('level') or 1)),
+                rarity=str(pig.get('rarity') or 'commun'),
+                lineage_boost=float(pig.get('lineage_boost') or 0.0),
+            )
+        return cls(
+            races_won=int(getattr(pig, 'races_won', 0) or 0),
+            level=max(1, int(getattr(pig, 'level', 1) or 1)),
+            rarity=str(getattr(pig, 'rarity', 'commun') or 'commun'),
+            lineage_boost=float(getattr(pig, 'lineage_boost', 0.0) or 0.0),
+        )
 
 
 def get_freshness_bonus(pig):
@@ -247,10 +272,9 @@ def get_lineage_label(pig):
 
 
 def get_pig_heritage_value(pig):
-    wins = pig.races_won or 0
-    level = pig.level or 1
-    rarity_bonus = {'commun': 0.0, 'rare': 0.5, 'epique': 1.0, 'legendaire': 2.0}.get(pig.rarity or 'commun', 0.0)
-    return round((wins * 0.6) + max(0, level - 1) * 0.08 + (pig.lineage_boost or 0.0) + rarity_bonus, 2)
+    heritage = PigHeritageSnapshot.from_source(pig)
+    rarity_bonus = {'commun': 0.0, 'rare': 0.5, 'epique': 1.0, 'legendaire': 2.0}.get(heritage.rarity, 0.0)
+    return round((heritage.races_won * 0.6) + max(0, heritage.level - 1) * 0.08 + heritage.lineage_boost + rarity_bonus, 2)
 
 
 def can_retire_into_heritage(pig):
