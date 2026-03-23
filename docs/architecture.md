@@ -23,6 +23,9 @@
 8.  **`BalanceTransaction`** : Journal comptable complet de chaque BitGroin dépensé ou gagné (traçabilité totale).
 9.  **`Auction`** : Marché aux enchères temporisées pour l'achat/vente de cochons entre joueurs.
 10. **`GrainMarket`** : Singleton partagé de la Bourse aux Grains. Stocke la position du curseur (cursor_x, cursor_y) sur la grille 7x7, le grain actuellement en vitrine (bloqué), et les métadonnées de la dernière transaction.
+11. **`Shop` & `Item`** : Modèles de base pour la Galerie Lard-chande (nom de la boutique, items vendables avec leur coût double-monnaie et effet).
+12. **`InventoryItem`** : Modèle de la possession d'objets des joueurs avec la quantité de chacun d'eux.
+13. **`MarketplaceListing`** : Représente une annonce entre joueurs dans Le Bon Groin pour vendre leurs objets inventoriés.
 
 ## Mécaniques Principales
 
@@ -58,11 +61,14 @@ derby_des_groins/
 │   ├── main.py             # Index, Classement, Historique, Légendes
 │   ├── pig.py              # Gestion tamagotchi, nutrition, entraînement, reproduction
 │   ├── bourse.py           # Bourse aux Grains (marché dynamique, grille, vitrine)
+│   ├── galerie.py          # Galerie Lard-chande & marketplace Le Bon Groin
 │   ├── race.py             # Calendrier, planification, visualisation des courses
 │   ├── market.py           # Enchères et transactions de cochons
 │   ├── abattoir.py         # Hall des cochons morts / cimetière
 │   ├── admin.py            # Outils de gestion pour le maître du jeu
-│   └── api.py              # Endpoints JSON pour l'UI dynamique
+│   ├── blackjack.py        # Mini-jeu Groin Jack (blackjack porcin)
+│   ├── truffes.py          # Mini-jeu Jeu des Truffes (cherche-truffe)
+│   └── api.py              # Endpoints JSON pour l'UI dynamique + replay course
 ├── templates/              # Vues Jinja2 (v3.0 UI Responsive)
 └── instance/               # Données locales SQLite
 ```
@@ -71,11 +77,16 @@ derby_des_groins/
 - `/` : Dashboard central et guichet des paris.
 - `/pig/...` : Gestion des cochons (nutrition, entraînement, reproduction, étable).
 - `/race/...` : Calendrier et suivi des courses en direct.
+- `/galerie-lard-chande/...` : La Galerie Lard-chande, ses 5 magasins.
+- `/le-bon-groin/...` : La marketplace P2P des différents objets.
 - `/market` : Accès aux ventes aux enchères.
 - `/bourse` : Bourse aux Grains — marché dynamique de céréales avec grille de cotation partagée.
 - `/classement` : Ranking global des éleveurs et trophées.
 - `/history` : Journal complet des BitGroins et archives des courses.
 - `/abattoir` : Hommage aux cochons disparus.
+- `/blackjack` : Mini-jeu Groin Jack — blackjack porcin avec mise en BitGroins.
+- `/truffes` : Mini-jeu Jeu des Truffes — cherche-truffe sur grille 20×20.
+- `/race/live` : Replay animé de la dernière course tour par tour.
 
 ## Choix de Design
 L'esthétique repose sur un **"Premium Dark Mode"** avec des accents vibrants. L'UI utilise massivement Tailwind CSS pour la réactivité et Chart.js pour visualiser les statistiques de performance des cochons.
