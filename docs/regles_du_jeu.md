@@ -106,7 +106,29 @@ La nourriture ne s'achete plus a prix fixe. Tous les prix et la qualite des cere
 
 Bonne chance à tous les éleveurs ! 🐽
 
-## 8. Evolutions cibles du meta-jeu
+## 8. Les Mini-Jeux
+
+### Groin Jack (`/blackjack`)
+Un blackjack porcin jouable à tout moment avec ses BitGroins.
+- Mise entre **5 et 500 🪙** par partie.
+- Deck standard 52 cartes + **2 Jokers** porcins (effet aléatoire : carte bonus ou perturbation du croupier).
+- Actions disponibles : **Tirer** (Hit), **Rester** (Stand), **Doubler** (Double — mise doublée, une seule carte).
+- Blackjack naturel payé **3:2** (x2.5 la mise). Victoire classique = x2. Égalité = remboursement.
+- La mise est débitée à l'ouverture de la partie et créditée automatiquement en cas de gain ou d'égalité.
+
+### Jeu des Truffes (`/truffes`)
+Mini-jeu de cherche-truffe sur une grille 20×20.
+- Le joueur dispose de **7 clics maximum** pour localiser la truffe cachée.
+- Récompense en cas de succès : **20 🪙** crédités automatiquement.
+- Gratuit, sans mise, utilisable comme revenu d'appoint.
+
+### Course en Direct (`/race/live`)
+Replay animé de la dernière course terminée, consultable à tout moment.
+- Visualisation **tour par tour** : positions, accélérations, drafting, fatigue, accrocs.
+- Classement live mis à jour à chaque tour avec indicateur de progression.
+- Légende des événements : Sprint, Drafting, Tired, Stumble.
+
+## 9. Evolutions cibles du meta-jeu
 - Le long terme doit reposer sur des **saisons**, des **ligues** et un **Hall of Fame** plutot que sur un classement unique eternel.
 - Les cochons doivent pouvoir beneficier de **repos**, de buffs de fraicheur, voire d'un futur systeme de **lignee / heritage** pour prolonger l'attachement au compte.
 - Les courses ont vocation a proposer des **themes** et **conditions de piste** pour rendre chaque statistique utile selon le contexte.

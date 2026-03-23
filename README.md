@@ -80,6 +80,9 @@ Chaque joueur possède un **cochon virtuel** qu'il doit développer comme un Tam
 - **Suivre ton compte** et changer ton mot de passe dans **Mon Profil**
 - **Auditer l'activite** dans **Historique** : courses terminees, tickets et journal BitGroins
 - **Oser le Challenge de la Mort** — mise x3 si top 3, mais dernier = abattoir 🔪
+- **Jouer au Groin Jack** (`/blackjack`) — blackjack porcin avec mise en BitGroins, Jokers et double
+- **Chercher des Truffes** (`/truffes`) — mini-jeu gratuit sur grille 20×20, 7 clics pour gagner 20 🪙
+- **Regarder la Course en Direct** (`/race/live`) — replay animé tour par tour de la dernière course
 
 ### 🧭 Vision long terme et rétention
 
@@ -294,10 +297,13 @@ derby_des_groins/
 18. Les mouvements critiques de **BitGroins** (paris, enchères, récompenses) passent par des mises à jour atomiques côté base pour limiter les doubles clics et les conflits de concurrence
 19. La page **Historique** centralise les courses terminées, les tickets déjà joués et un **journal credit/debit BitGroins** pour la traçabilité
 20. Les courses, les enchères et les deadlines du vétérinaire sont gérées par un **scheduler de fond**, même si personne n'est connecté
-21. La **Bourse aux Grains** remplace les prix fixes : un curseur sur une grille 5x5 partagée par tous les joueurs determine le prix et la qualite de la nourriture. Chaque joueur peut deplacer le curseur avant d'acheter, et le dernier grain achete est bloque en vitrine
-22. Le **Classement** propose 5 onglets (General, Abattoir, Paris, Elevage, Mur de la Honte) avec 18+ awards automatiques et des charts detailles
-23. La **Prime de pointage** de 15 🪙 est versee automatiquement a la premiere connexion de chaque journee pour garantir un revenu minimum
-24. L'**equilibrage v2** divise les gains de stats par 5 (anti-snowball), reduit la duree de vie des cochons de moitie et nerf la strategie Economie en course
+21. Le **Groin Jack** (`/blackjack`) permet de miser des BitGroins dans un blackjack porcin : deck 52 cartes + 2 Jokers, actions Hit/Stand/Double, blackjack naturel payé 3:2
+22. Le **Jeu des Truffes** (`/truffes`) est un mini-jeu gratuit : trouver la truffe cachée en 7 clics sur une grille 20×20 rapporte 20 🪙
+23. La **Course en Direct** (`/race/live`) propose un replay animé tour par tour de la dernière course avec positions, événements et classement live
+24. La **Bourse aux Grains** remplace les prix fixes : un curseur sur une grille 5x5 partagée par tous les joueurs determine le prix et la qualite de la nourriture. Chaque joueur peut deplacer le curseur avant d'acheter, et le dernier grain achete est bloque en vitrine
+25. Le **Classement** propose 5 onglets (General, Abattoir, Paris, Elevage, Mur de la Honte) avec 18+ awards automatiques et des charts detailles
+26. La **Prime de pointage** de 15 🪙 est versee automatiquement a la premiere connexion de chaque journee pour garantir un revenu minimum
+27. L'**equilibrage v2** divise les gains de stats par 5 (anti-snowball), reduit la duree de vie des cochons de moitie et nerf la strategie Economie en course
 
 ---
 

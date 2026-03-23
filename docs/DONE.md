@@ -46,6 +46,27 @@ Liste des fonctionnalités et idées déjà implémentées dans le projet.
   - Récupération de fatigue en stratégie Économie (strat < 25) nerfée : de -0.5 à -0.1 par tour.
   - Bonus d'aspiration (drafting) réduit : de +1.5 à +0.8, pour éviter que les cochons endurants en Économie dominent systématiquement.
 
+## Mini-Jeux
+
+### Groin Jack (`/blackjack`)
+- Blackjack porcin jouable avec les BitGroins (mise 5–500 🪙).
+- Deck 52 cartes + 2 Jokers avec effets aléatoires (carte bonus, perturbation croupier).
+- Actions : Hit, Stand, Double (disponible uniquement sur la première main à 2 cartes).
+- Blackjack naturel payé 3:2. Victoire = x2 mise. Égalité = remboursement intégral.
+- Mise débitée à l'ouverture, gain/remboursement crédité via `finance_service`.
+
+### Jeu des Truffes (`/truffes`)
+- Mini-jeu de cherche-truffe sur grille 20×20.
+- 7 clics maximum pour trouver la truffe cachée.
+- Récompense en cas de succès : 20 🪙 crédités automatiquement.
+- Sans mise, utilisable comme revenu d'appoint gratuit.
+
+### Course en Direct (`/race/live`)
+- Replay animé tour par tour de la dernière course terminée.
+- Visualisation des positions, accélérations, drafting, fatigue et accrocs.
+- Classement live mis à jour à chaque tour avec barre de progression globale.
+- Données servies via un nouvel endpoint JSON dans `api.py`.
+
 ## Infrastructure et Admin
 - **Configuration Admin** : Ajout de réglages dans le panneau d'administration pour les seuils de participants et les modes de gestion des courses vides.
 - **Historique étendu** : Les courses annulées apparaissent désormais dans l'historique pour une meilleure transparence.

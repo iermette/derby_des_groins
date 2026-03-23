@@ -62,7 +62,9 @@ derby_des_groins/
 │   ├── market.py           # Enchères et transactions de cochons
 │   ├── abattoir.py         # Hall des cochons morts / cimetière
 │   ├── admin.py            # Outils de gestion pour le maître du jeu
-│   └── api.py              # Endpoints JSON pour l'UI dynamique
+│   ├── blackjack.py        # Mini-jeu Groin Jack (blackjack porcin)
+│   ├── truffes.py          # Mini-jeu Jeu des Truffes (cherche-truffe)
+│   └── api.py              # Endpoints JSON pour l'UI dynamique + replay course
 ├── templates/              # Vues Jinja2 (v3.0 UI Responsive)
 └── instance/               # Données locales SQLite
 ```
@@ -76,6 +78,9 @@ derby_des_groins/
 - `/classement` : Ranking global des éleveurs et trophées.
 - `/history` : Journal complet des BitGroins et archives des courses.
 - `/abattoir` : Hommage aux cochons disparus.
+- `/blackjack` : Mini-jeu Groin Jack — blackjack porcin avec mise en BitGroins.
+- `/truffes` : Mini-jeu Jeu des Truffes — cherche-truffe sur grille 20×20.
+- `/race/live` : Replay animé de la dernière course tour par tour.
 
 ## Choix de Design
 L'esthétique repose sur un **"Premium Dark Mode"** avec des accents vibrants. L'UI utilise massivement Tailwind CSS pour la réactivité et Chart.js pour visualiser les statistiques de performance des cochons.
