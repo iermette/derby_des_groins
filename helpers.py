@@ -1863,6 +1863,7 @@ from services.market_service import (
     get_market_close_time, get_next_market_time, get_prix_moyen_groin,
     get_all_grain_surcharges, is_grain_blocked, is_market_open,
     move_bourse_cursor, resolve_auctions, update_vitrine, generate_auction_pig,
+    resolve_market_history,
 )
 from services.pig_service import (
     adjust_pig_weight, apply_origin_bonus, build_unique_pig_name,
