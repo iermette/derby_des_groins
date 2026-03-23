@@ -41,8 +41,8 @@ def courses():
             'weight_profile': get_weight_profile(pig),
         })
 
-    schedule = build_course_schedule(user, pigs, days=30)
-    next_week_slots = schedule[:7]
+    schedule = build_course_schedule(user, pigs, days=2)
+    next_week_slots = schedule[:24]
 
     return render_template(
         'courses.html',
