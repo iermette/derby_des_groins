@@ -104,6 +104,7 @@ def migrate_db():
         ('bet', 'selection_order', 'VARCHAR(240)'),
         ('user', 'last_daily_reward_at', 'DATETIME'),
         ('user', 'last_truffe_at', 'DATETIME'),
+        ('user', 'truffes_balance', 'FLOAT DEFAULT 0.0'),
         ('trophy', 'pig_name', 'VARCHAR(80)'),
         ('trophy', 'trophy_key', 'VARCHAR(50)'),
         ('trophy', 'date_earned', 'DATETIME'),
