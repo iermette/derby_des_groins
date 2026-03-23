@@ -212,15 +212,33 @@ def get_course_theme(slot_time):
 
 
 def get_next_race_time():
-    settings = get_game_settings()
+    """Renvoie le prochain créneau de course (:00 ou :30)."""
     now = datetime.now()
-    today_race = now.replace(hour=settings.race_hour, minute=settings.race_minute, second=0, microsecond=0)
-    return today_race + timedelta(days=1) if now >= today_race else today_race
+    if now.minute < 30:
+        return now.replace(minute=30, second=0, microsecond=0)
+    return (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
 
 
-def get_upcoming_course_slots(days=30):
-    first_slot = get_next_race_time()
-    return [first_slot + timedelta(days=offset) for offset in range(days)]
+def get_upcoming_course_slots(days=1):
+    """
+    Renvoie la liste des créneaux de courses à venir (toutes les 30 minutes).
+    Par défaut, on limite à 1-2 jours pour éviter de surcharger le planning,
+    sauf si un paramètre 'days' plus grand est demandé.
+    """
+    now = datetime.now()
+    # On commence au prochain créneau :00 ou :30 après 'now'
+    if now.minute < 30:
+        start = now.replace(minute=30, second=0, microsecond=0)
+    else:
+        start = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+    
+    # 48 créneaux par jour (toutes les 30 minutes)
+    num_slots = int(days * 48)
+    # Limitation de sécurité pour éviter le lag sur le dashboard
+    if num_slots > 500:
+        num_slots = 500
+        
+    return [start + timedelta(minutes=30 * i) for i in range(num_slots)]
 
 
 def _get_open_race_for_slot(scheduled_at):
