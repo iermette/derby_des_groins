@@ -127,11 +127,17 @@
             <h1 class="font-title text-4xl text-white">Mes Champions</h1>
             <p class="text-white/50 text-xs font-bold mt-2">Héritage porcherie: +{{ "%.1f"|format(user.barn_heritage_bonus or 0) }} • Pression nourriture actuelle x{{ "%.2f"|format(feeding_multiplier) }} • Capacité {{ pigs_data|length }}/{{ max_slots }} • En-cas solidaires restants {{ pigs_data[0].share_snacks_remaining if pigs_data else 3 }}/3</p>
         </div>
+        {% if adoption_cost is not none %}
         {% set adopt_msg = "Adopter un cochon de secours" if not pigs_data else "Adopter une recrue" %}
         {% set adopt_full_msg = "Adopter " ~ adopt_msg ~ " pour %.0f 🪙 ? Plus la porcherie est grande, plus nourrir tout le monde coûte cher."|format(adoption_cost) %}
         <a href="/adopt-second-pig" class="btn-primary flex items-center gap-2" onclick="return confirm('{{ adopt_full_msg }}');">
             ➕ {{ adopt_msg }} ({{ "%.0f"|format(adoption_cost) }} 🪙)
         </a>
+        {% else %}
+        <div class="pill bg-white/5 border border-white/10 text-white/40">
+            ⚠️ Porcherie pleine ({{ max_slots }}/{{ max_slots }})
+        </div>
+        {% endif %}
     </div>
 
     <div class="card p-5 mb-8">
