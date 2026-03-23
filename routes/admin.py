@@ -42,6 +42,8 @@ def admin():
             'market_duration': settings.market_duration,
             'min_real_participants': settings.min_real_participants,
             'empty_race_mode': settings.empty_race_mode,
+            'race_schedule': settings.race_schedule,
+            'schedule_dict': settings.schedule_dict,
         },
         jours=JOURS_FR
     )
@@ -55,6 +57,7 @@ def admin_save():
     if not user or not user.is_admin:
         return redirect(url_for('main.index'))
 
+    # Sauvegarde des paramètres classiques
     keys = [
         'race_hour', 'race_minute', 'market_day', 'market_hour',
         'market_minute', 'market_duration', 'min_real_participants', 'empty_race_mode'
@@ -63,6 +66,20 @@ def admin_save():
         val = request.form.get(key)
         if val is not None:
             set_config(key, val)
+
+    # Sauvegarde de la grille horaire (reconstitution du JSON à partir des 7 jours)
+    schedule = {}
+    for i in range(7):
+        day_times_raw = request.form.get(f'schedule_{i}', '').strip()
+        times = [t.strip() for t in day_times_raw.split(',') if t.strip()]
+        # Filtrage basique format HH:MM
+        valid_times = []
+        for t in times:
+            if ':' in t:
+                valid_times.append(t)
+        schedule[str(i)] = sorted(valid_times)
+    
+    set_config('race_schedule', json.dumps(schedule))
 
     flash("Configuration sauvegardée !", "success")
     return redirect(url_for('admin.admin'))
