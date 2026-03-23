@@ -83,6 +83,8 @@ Chaque joueur possède un **cochon virtuel** qu'il doit développer comme un Tam
 - **Jouer au Groin Jack** (`/blackjack`) — blackjack porcin avec mise en BitGroins, Jokers et double
 - **Chercher des Truffes** (`/truffes`) — mini-jeu gratuit sur grille 20×20, 7 clics pour gagner 20 🪙
 - **Regarder la Course en Direct** (`/race/live`) — replay animé tour par tour de la dernière course
+- **Faire du shopping** (`/galerie-lard-chande`) — acheter des équipements et cosmétiques dans les 5 boutiques de La Galerie Lard-chande avec vos Glands et Truffes
+- **Vendre et Acheter d'occasion** (`/le-bon-groin`) — marchander vos objets avec les autres joueurs sur Le Bon Groin
 
 ### 🧭 Vision long terme et rétention
 
@@ -229,6 +231,7 @@ derby_des_groins/
 │   ├── race.py             # courses (calendrier), plan_course, place_bet
 │   ├── pig.py              # mon-cochon, adopt, feed, train, school, challenge, sacrifice
 │   ├── bourse.py           # Bourse aux Grains — marché dynamique, grille, vitrine
+│   ├── galerie.py          # Galerie Lard-chande & Le Bon Groin (Boutiques et P2P)
 │   ├── market.py           # marché, bid, sell-pig
 │   ├── abattoir.py         # abattoir, cimetière
 │   ├── admin.py            # admin panel, config, force-race
@@ -245,6 +248,9 @@ derby_des_groins/
 │   ├── bourse.html          # Bourse aux Grains — grille 5x5, curseur partagé, vitrine
 │   ├── marche.html          # Marché aux Cochons — enchères
 │   ├── classement.html      # Classement général des joueurs
+│   ├── galerie_lard_chande.html # Hub des boutiques et petites annonces
+│   ├── shop_detail.html     # Vitrine d'une boutique spécifique
+│   ├── le_bon_groin.html    # La marketplace d'objets entre joueurs
 │   ├── legendes_pop.html    # Légendes porcines de la pop culture
 │   ├── abattoir.html        # L'Abattoir — vitrine de charcuterie
 │   ├── cimetiere.html       # Cimetière des Légendes — tombes des héros

@@ -70,3 +70,9 @@ Liste des fonctionnalités et idées déjà implémentées dans le projet.
 ## Infrastructure et Admin
 - **Configuration Admin** : Ajout de réglages dans le panneau d'administration pour les seuils de participants et les modes de gestion des courses vides.
 - **Historique étendu** : Les courses annulées apparaissent désormais dans l'historique pour une meilleure transparence.
+
+## Achats et Équipements
+- **La Galerie Lard-chande** (`/galerie-lard-chande`) : Hub d'achats réunissant 5 boutiques thématiques pour vos cochons (sport, pop-culture, soin esthétique, etc.).
+- **Double Monnaie** : Les objets peuvent s'acheter soit en BitGroins réguliers (Glands), soit avec des Truffes.
+- **Système de Fiabilité** : Chaque objet a un niveau de fiabilité permettant l'ajout d'objets surpuissants mais très risqués (ex: chez AliGoret).
+- **Le Bon Groin** (`/le-bon-groin`) : Une plateforme de petites annonces Player-to-Player (P2P) pour vendre ses objets d'inventaire dont on ne se sert plus.

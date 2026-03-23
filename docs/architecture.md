@@ -23,6 +23,9 @@
 8.  **`BalanceTransaction`** : Journal comptable complet de chaque BitGroin dépensé ou gagné (traçabilité totale).
 9.  **`Auction`** : Marché aux enchères temporisées pour l'achat/vente de cochons entre joueurs.
 10. **`GrainMarket`** : Singleton partagé de la Bourse aux Grains. Stocke la position du curseur (cursor_x, cursor_y) sur la grille 7x7, le grain actuellement en vitrine (bloqué), et les métadonnées de la dernière transaction.
+11. **`Shop` & `Item`** : Modèles de base pour la Galerie Lard-chande (nom de la boutique, items vendables avec leur coût double-monnaie et effet).
+12. **`InventoryItem`** : Modèle de la possession d'objets des joueurs avec la quantité de chacun d'eux.
+13. **`MarketplaceListing`** : Représente une annonce entre joueurs dans Le Bon Groin pour vendre leurs objets inventoriés.
 
 ## Mécaniques Principales
 
@@ -58,6 +61,7 @@ derby_des_groins/
 │   ├── main.py             # Index, Classement, Historique, Légendes
 │   ├── pig.py              # Gestion tamagotchi, nutrition, entraînement, reproduction
 │   ├── bourse.py           # Bourse aux Grains (marché dynamique, grille, vitrine)
+│   ├── galerie.py          # Galerie Lard-chande & marketplace Le Bon Groin
 │   ├── race.py             # Calendrier, planification, visualisation des courses
 │   ├── market.py           # Enchères et transactions de cochons
 │   ├── abattoir.py         # Hall des cochons morts / cimetière
@@ -73,6 +77,8 @@ derby_des_groins/
 - `/` : Dashboard central et guichet des paris.
 - `/pig/...` : Gestion des cochons (nutrition, entraînement, reproduction, étable).
 - `/race/...` : Calendrier et suivi des courses en direct.
+- `/galerie-lard-chande/...` : La Galerie Lard-chande, ses 5 magasins.
+- `/le-bon-groin/...` : La marketplace P2P des différents objets.
 - `/market` : Accès aux ventes aux enchères.
 - `/bourse` : Bourse aux Grains — marché dynamique de céréales avec grille de cotation partagée.
 - `/classement` : Ranking global des éleveurs et trophées.
