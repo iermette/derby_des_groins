@@ -116,31 +116,24 @@
 
         <!-- CONFIGURATION COURSES -->
         <div class="card p-6">
-            <h2 class="font-title text-2xl text-white mb-1">🏁 Horaire des Courses</h2>
-            <p class="text-white/40 text-sm font-semibold mb-5">Une course par jour à l'heure configurée.</p>
+                <h3 class="font-title text-lg text-white mb-3 mt-6">📅 Grille Hebdomadaire des Courses</h3>
+                <p class="text-white/40 text-xs font-semibold mb-4">Indique les heures séparées par des virgules (ex: 08:30, 12:00, 17:30).</p>
 
-            <form method="POST" action="/admin/save">
-                <div class="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <label class="text-white/60 text-xs font-bold block mb-1">Heure</label>
-                        <input type="number" name="race_hour" value="{{ config.race_hour }}" min="0" max="23"
-                               class="input-admin w-full">
+                <div class="space-y-3 mb-6">
+                    {% for i in range(7) %}
+                    <div class="flex items-center gap-3">
+                        <label class="text-white/60 text-xs font-bold w-16 shrink-0">{{ jours[i] }}</label>
+                        <input type="text" name="schedule_{{ i }}" 
+                               value="{{ config.schedule_dict.get(i|string, []) | join(', ') }}"
+                               placeholder="HH:MM, HH:MM..."
+                               class="input-admin flex-1 text-xs">
                     </div>
-                    <div>
-                        <label class="text-white/60 text-xs font-bold block mb-1">Minutes</label>
-                        <input type="number" name="race_minute" value="{{ config.race_minute }}" min="0" max="59"
-                               class="input-admin w-full">
-                    </div>
+                    {% endfor %}
                 </div>
 
-                <div class="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-3 mb-4">
-                    <p class="text-indigo-300/70 text-xs font-bold">
-                        ⏰ Prochaine course :
-                        {% if next_race %}
-                            <span class="text-indigo-300">{{ next_race.scheduled_at.strftime('%d/%m/%Y à %H:%M') }}</span>
-                        {% else %}
-                            <span class="text-white/40">Aucune planifiée</span>
-                        {% endif %}
+                <div class="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-3 mb-6">
+                    <p class="text-indigo-300/70 text-xs font-bold leading-relaxed">
+                        💡 Tu peux régler n'importe quelle fréquence. Si tu vides un jour, aucune course automatique ne sera planifiée pour ce jour-là.
                     </p>
                 </div>
 
@@ -193,8 +186,8 @@
                     </div>
                 </div>
 
-                <button type="submit" class="btn-admin w-full mt-2">
-                    💾 Sauvegarder la configuration
+                <button type="submit" class="btn-admin w-full mt-6">
+                    💾 Sauvegarder la configuration globale
                 </button>
             </form>
         </div>

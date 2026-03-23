@@ -212,33 +212,53 @@ def get_course_theme(slot_time):
 
 
 def get_next_race_time():
-    """Renvoie le prochain créneau de course (:00 ou :30)."""
+    """Renvoie le prochain créneau de course défini dans la grille horaire admin."""
+    settings = get_game_settings()
+    schedule = settings.schedule_dict
     now = datetime.now()
-    if now.minute < 30:
-        return now.replace(minute=30, second=0, microsecond=0)
-    return (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
-
-
-def get_upcoming_course_slots(days=1):
-    """
-    Renvoie la liste des créneaux de courses à venir (toutes les 30 minutes).
-    Par défaut, on limite à 1-2 jours pour éviter de surcharger le planning,
-    sauf si un paramètre 'days' plus grand est demandé.
-    """
-    now = datetime.now()
-    # On commence au prochain créneau :00 ou :30 après 'now'
-    if now.minute < 30:
-        start = now.replace(minute=30, second=0, microsecond=0)
-    else:
-        start = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
     
-    # 48 créneaux par jour (toutes les 30 minutes)
-    num_slots = int(days * 48)
-    # Limitation de sécurité pour éviter le lag sur le dashboard
-    if num_slots > 500:
-        num_slots = 500
-        
-    return [start + timedelta(minutes=30 * i) for i in range(num_slots)]
+    # On regarde aujourd'hui et les 7 prochains jours
+    for i in range(8):
+        day = now + timedelta(days=i)
+        day_idx = str(day.weekday())
+        times = schedule.get(day_idx, [])
+        for t_str in sorted(times):
+            try:
+                h, m = map(int, t_str.split(':'))
+                race_time = day.replace(hour=h, minute=m, second=0, microsecond=0)
+                if race_time > now:
+                    return race_time
+            except (ValueError, AttributeError):
+                continue
+    # Fallback si grille vide : demain 14:00
+    return (now + timedelta(days=1)).replace(hour=14, minute=0, second=0, microsecond=0)
+
+
+def get_upcoming_course_slots(days=2):
+    """Renvoie les prochains créneaux selon la grille horaire, limités aux 'days' prochains jours."""
+    settings = get_game_settings()
+    schedule = settings.schedule_dict
+    now = datetime.now()
+    slots = []
+    
+    max_date = now + timedelta(days=days)
+    
+    # On itère sur chaque jour de la plage demandée
+    for i in range(days + 1):
+        day = now + timedelta(days=i)
+        day_idx = str(day.weekday())
+        times = schedule.get(day_idx, [])
+        for t_str in sorted(times):
+            try:
+                h, m = map(int, t_str.split(':'))
+                race_time = day.replace(hour=h, minute=m, second=0, microsecond=0)
+                if race_time > now and race_time <= max_date:
+                    slots.append(race_time)
+            except (ValueError, AttributeError):
+                continue
+    
+    slots.sort()
+    return slots[:500]
 
 
 def _get_open_race_for_slot(scheduled_at):
