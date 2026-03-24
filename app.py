@@ -34,6 +34,7 @@ def create_app():
     app.config['SESSION_COOKIE_SECURE'] = os.environ.get('FLASK_ENV') == 'production'
     app.config['SESSION_COOKIE_HTTPONLY'] = True
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    app.config['TEMPLATES_AUTO_RELOAD'] = os.environ.get('FLASK_ENV') != 'production'
 
     # ── Base de donnees ─────────────────────────────────────────────────
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(

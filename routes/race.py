@@ -45,6 +45,15 @@ def courses():
     schedule = build_course_schedule(user, pigs, days=2)
     next_week_slots = schedule[:24]
 
+    # Ajouter date_key pour groupby Jinja2 dans le calendrier
+    JOURS_FR_SHORT = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
+    MOIS_FR = ['', 'Janv', 'Fev', 'Mars', 'Avril', 'Mai', 'Juin',
+               'Juil', 'Aout', 'Sept', 'Oct', 'Nov', 'Dec']
+    for s in schedule:
+        dt = s['slot']
+        s['date_key'] = dt.strftime('%Y-%m-%d')
+        s['date_label'] = f"{JOURS_FR_SHORT[dt.weekday()]}. {dt.day} {MOIS_FR[dt.month]}"
+
     return render_template(
         'courses.html',
         user=user,

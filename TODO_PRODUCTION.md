@@ -92,12 +92,20 @@
   - `_game_data_cache` dict avec TTL 300s dans `helpers/game_data.py`
   - `invalidate_game_data_cache()` appele automatiquement via `after_request` sur le blueprint admin apres tout POST /admin/data/*
 
+### Phase 7 — UX / Templates ✅
+- [x] **7.1** Calendrier des courses : refonte du layout
+  - Ancien : grille 7 colonnes avec header LUN-DIM trompeur, meme date repetee 7+ fois
+  - Nouveau : groupement par jour (soft-card par date), creneaux horaires en lignes compactes
+  - Ajout `date_key` + `date_label` dans la route pour groupby Jinja2
+  - Chaque jour affiche : numero, nom jour + mois, theme, nombre de creneaux
+  - Creneaux : heure, cochons inscrits (emojis), badges statut (Prochaine/Planifiable/N partants)
+
 ### Code optionnel (ameliorations futures)
 
 | # | Tache | Effort | Detail |
 |---|-------|--------|--------|
-| 7 | **1.8** SRI sur CDN externes | 15 min | Ajouter `integrity=` + `crossorigin=` sur Tailwind/Chart.js/Fonts |
-| 8 | **2.5** Batch `update_vitals()` | 30 min | 1 UPDATE par cochon a chaque page → batch ou cache |
+| 7 | **1.8** SRI sur CDN externes | 15 min | Bundler Tailwind en local plutot. Chart.js → pin version + SRI |
+| 8 | **2.5** Batch `update_vitals()` | 30 min | Inutile si migration PostgreSQL (multi-writer). Sinon throttle 60s |
 
 ---
 
