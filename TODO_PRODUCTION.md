@@ -84,14 +84,20 @@
 | 5 | **2.7** Sessions server-side | 30 min | Flask-Session + Redis ou PostgreSQL |
 | 6 | **2.8** Rate limiting | 10 min | `flask-limiter` : login 5/min, paris 10/min, API 30/min |
 
+### Phase 6 — Caches supplementaires ✅
+- [x] **2.6b** Cache classement : cache memoire 5 min sur `_build_classement_data()`
+  - Extraction de la logique en sous-fonction cacheable
+  - `_classement_cache` dict avec TTL 300s
+- [x] **2.6c** Cache cereales/trainings/lecons : cache memoire 5 min
+  - `_game_data_cache` dict avec TTL 300s dans `helpers/game_data.py`
+  - `invalidate_game_data_cache()` appele automatiquement via `after_request` sur le blueprint admin apres tout POST /admin/data/*
+
 ### Code optionnel (ameliorations futures)
 
 | # | Tache | Effort | Detail |
 |---|-------|--------|--------|
 | 7 | **1.8** SRI sur CDN externes | 15 min | Ajouter `integrity=` + `crossorigin=` sur Tailwind/Chart.js/Fonts |
 | 8 | **2.5** Batch `update_vitals()` | 30 min | 1 UPDATE par cochon a chaque page → batch ou cache |
-| 9 | **2.6b** Cache classement | 20 min | Cache 5min sur `/classement` (deja optimise en queries batch) |
-| 10 | **2.6c** Cache cereales/trainings | 10 min | Donnees quasi-statiques, cache au demarrage |
 
 ---
 

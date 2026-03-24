@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, session, flash, request
 from sqlalchemy import func
 from datetime import datetime
+import time
 
 from extensions import db
 from models import User, Pig, Race, Participant, Bet, BalanceTransaction, CoursePlan, Trophy
@@ -11,6 +12,10 @@ from services.pig_service import calculate_pig_power, get_weight_profile
 from services.race_service import get_pig_dashboard_status, build_course_schedule, get_user_weekly_bet_count, get_course_theme
 
 main_bp = Blueprint('main', __name__)
+
+# ── Cache classement (5 min TTL) ─────────────────────────────────────────
+_classement_cache = {'data': None, 'ts': 0}
+_CLASSEMENT_TTL = 300  # 5 minutes
 
 
 @main_bp.route('/')
@@ -207,12 +212,8 @@ def history():
     )
 
 
-@main_bp.route('/classement')
-def classement():
-    user = None
-    if 'user_id' in session:
-        user = User.query.get(session['user_id'])
-
+def _build_classement_data():
+    """Build rankings, chart_data and awards. Cached for 5 min."""
     all_users = User.query.all()
     user_ids = [u.id for u in all_users]
 
@@ -502,6 +503,23 @@ def classement():
     if survivors:
         survivor = max(survivors, key=lambda r: r['total_races'])
         awards.append({'emoji': '🛡️', 'title': 'Le Survivant', 'desc': 'Le plus de courses sans aucune perte', 'user': survivor['user'].username, 'value': f"{survivor['total_races']} courses, 0 mort", 'color': 'emerald'})
+
+    return rankings, chart_data, awards
+
+
+@main_bp.route('/classement')
+def classement():
+    user = None
+    if 'user_id' in session:
+        user = User.query.get(session['user_id'])
+
+    now = time.time()
+    if _classement_cache['data'] and (now - _classement_cache['ts']) < _CLASSEMENT_TTL:
+        rankings, chart_data, awards = _classement_cache['data']
+    else:
+        rankings, chart_data, awards = _build_classement_data()
+        _classement_cache['data'] = (rankings, chart_data, awards)
+        _classement_cache['ts'] = now
 
     return render_template('classement.html', user=user, rankings=rankings, chart_data=chart_data, awards=awards, active_page='classement')
 

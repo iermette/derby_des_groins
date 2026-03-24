@@ -56,6 +56,7 @@ from helpers.game_data import (
     get_all_cereals_dict,
     get_all_trainings_dict,
     get_all_school_lessons_dict,
+    invalidate_game_data_cache,
 )
 
 from helpers.market_helpers import (

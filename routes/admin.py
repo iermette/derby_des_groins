@@ -13,12 +13,23 @@ from data import JOURS_FR
 from helpers import (
     set_config, get_config, populate_race_participants, run_race_if_needed,
     get_all_cereals_dict, get_all_trainings_dict, get_all_school_lessons_dict,
+    invalidate_game_data_cache,
 )
 from services.game_settings_service import get_game_settings
 
 admin_bp = Blueprint('admin', __name__)
 
 STAT_NAMES = ('vitesse', 'endurance', 'agilite', 'force', 'intelligence', 'moral')
+
+
+@admin_bp.after_request
+def _invalidate_game_data_on_write(response):
+    """Invalidate game data cache after any successful POST on /admin/data/*."""
+    if (request.method == 'POST'
+            and request.path.startswith('/admin/data/')
+            and response.status_code in (200, 302)):
+        invalidate_game_data_cache()
+    return response
 
 
 # ══════════════════════════════════════════════════════════════════════════════
