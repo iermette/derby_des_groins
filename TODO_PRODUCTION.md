@@ -38,6 +38,37 @@
 - [x] `_send_email` : message generique cote client
 - [x] Mot de passe SMTP masque dans le HTML
 
+### Phase 5 — Circuit Live (visualisation de course synchronisee) ✅
+- [x] **5.1** `templates/race_circuit.html` : circuit SVG 2D plein ecran
+  - Piste elliptique generee a partir des segments terrain reels
+  - Segments colores par type (PLAT/MONTEE/DESCENTE/BOUE/VIRAGE) + icones
+  - Animation des cochons (emojis) le long du circuit via `getPointAtLength()`
+  - Panel stats lateral (vitesse, fatigue, phase strategie, terrain, events)
+  - Camera follow mode (zoom sur le cochon en tete)
+  - Controles : pause, vitesse x0.5/x1/x2/x4, fermer
+  - Toasts flottants (trebuchement, sprint, franchissement ligne)
+  - Ecran victoire anime avec podium top 5
+- [x] **5.2** Lobby pre-course (T-50s avant depart)
+  - Affiche participants + cotes + apercu segments colores + countdown
+  - Countdown dramatique 10-9-8...3-2-1-GO! plein ecran
+- [x] **5.3** Synchronisation multi-joueurs
+  - `GET /api/race/live-state` : phase (idle/pre_race/countdown/racing) + seconds_to_start
+  - Tous les clients pollent toutes les 3-4s → meme overlay au meme moment
+  - Detection auto `finished_race_id` → fetch replay → animation simultanee
+- [x] **5.4** Endpoints API
+  - `GET /api/race/live-state` — synchro phase de course
+  - `GET /api/race/<id>/pre-race` — participants + segments pour lobby
+  - `GET /api/race/<id>/bets-spectator` — paris en cours (mode spectateur)
+  - `GET /circuit` — page standalone du circuit
+- [x] **5.5** Segments pre-generes
+  - `Race.preview_segments_json` : colonne ajoutee au modele
+  - `ensure_next_race()` genere les segments a la creation de course
+  - `run_race_if_needed()` reutilise ces segments → circuit preview = course reelle
+- [x] **5.6** Integration `race_live.html`
+  - Bouton 🏟️ Circuit Live dans la barre de controle
+  - Overlay iframe plein ecran (`position:fixed; inset:0; z-index:10000`)
+  - Polling auto : ouverture overlay a T-50s, rechargement replay a la fin
+
 ---
 
 ## TACHES RESTANTES
