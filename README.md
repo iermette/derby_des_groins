@@ -164,31 +164,42 @@ Le jeu gère désormais une couche **reproduction / lignée / héritage** :
 
 ## 🚀 Installation & Lancement
 
-### 1. Cloner le projet
+### Option A — Docker (recommande)
+
 ```bash
 git clone <repo-url>
 cd derby_des_groins
+cp .env.example .env        # optionnel : personnaliser SECRET_KEY, etc.
+docker compose up -d
 ```
 
-### 2. Installer les dépendances
+Le site est accessible sur `http://localhost:5001`. PostgreSQL et Gunicorn sont configures automatiquement.
+
+- `docker compose down` : arrete les services (les donnees persistent)
+- `docker compose down -v` : arrete et supprime les donnees (clean restart)
+- `docker compose logs -f web` : voir les logs de l'application
+
+### Option B — Developpement local (SQLite)
+
 ```bash
+git clone <repo-url>
+cd derby_des_groins
 pip install -r requirements.txt
+python app.py
 ```
+
+Acces local : `http://127.0.0.1:5000`
 
 > Note compatibilite : sur Python recent (notamment 3.14), le projet a besoin d'une version recente de `SQLAlchemy`. Le `requirements.txt` du depot est pingle pour eviter l'erreur `SQLCoreOperations` vue sur certains postes.
 
-> Le projet utilise aussi `APScheduler` pour faire vivre le jeu en tache de fond : resolution des courses, controle des delais veterinaire et cloture des encheres sans dependre d'une visite sur le site.
+En usage local via `python app.py`, le scheduler demarre automatiquement. Si le projet est heberge via un import WSGI dedie, definir `DERBY_FORCE_SCHEDULER=1` sur le process qui doit piloter le monde de jeu.
 
-### 3. Lancer l'application : `python app.py`
-4. Accès local : `http://127.0.0.1:5000`
+### Acces test
 
-En usage local via `python app.py`, le scheduler demarre automatiquement dans le vrai process serveur. Si le projet est heberge via un import WSGI dedie, definir `DERBY_FORCE_SCHEDULER=1` sur le process qui doit piloter le monde de jeu.
-
-**🔑 Accès test :**
-- Les comptes par défaut (Christophe, Simon, etc.) utilisent le mot de passe : `mdp1234`
+- Les comptes par defaut (Christophe, Simon, etc.) utilisent le mot de passe : `mdp1234`
 - Le compte `Christophe` dispose des droits administrateur.
 
-La base de données SQLite est créée automatiquement au premier lancement avec 6 utilisateurs pré-configurés.
+La base de donnees est creee automatiquement au premier lancement avec 6 utilisateurs pre-configures.
 
 ---
 
@@ -217,59 +228,70 @@ Le projet suit une architecture **Flask Blueprints** modulaire, découpée par d
 derby_des_groins/
 ├── app.py                  # Factory create_app(), migrations, seeds
 ├── extensions.py           # SQLAlchemy db, timezone partagés
-├── models.py               # 10 modèles SQLAlchemy (User, Pig, Race, Bet, GrainMarket…)
+├── models.py               # 19 modèles SQLAlchemy (User, Pig, Race, Bet, GrainMarket…)
 ├── data.py                 # Constantes de jeu (céréales, entraînements, raretés…)
-├── helpers.py              # Logique métier (balance, courses, marché, paris…)
+├── race_engine.py          # Moteur de simulation de course
 ├── scheduler.py            # Tâches de fond APScheduler (courses, enchères, véto)
 ├── requirements.txt        # Dépendances Python
+├── Dockerfile              # Image Python 3.12-slim + Gunicorn
+├── docker-compose.yml      # Services web + PostgreSQL 16
+├── docker-entrypoint.sh    # Attente DB + lancement Gunicorn
+├── .env.example            # Variables d'environnement documentées
+├── .dockerignore
 ├── README.md
-├── IDEAS.md                # Backlog d'idées et pistes de game design
 ├── .gitignore
 │
-├── routes/                 # 9 Blueprints Flask
+├── routes/                 # 14 Blueprints Flask
 │   ├── __init__.py         # Registre des blueprints
 │   ├── auth.py             # register, login, logout, profil, magic-link login
 │   ├── main.py             # index (dashboard), history, classement, légendes pop
-│   ├── race.py             # courses (calendrier), plan_course, place_bet
+│   ├── race.py             # courses (calendrier), plan_course, place_bet, circuit live
 │   ├── pig.py              # mon-cochon, adopt, feed, train, school, challenge, sacrifice
 │   ├── bourse.py           # Bourse aux Grains — marché dynamique, grille, vitrine
 │   ├── galerie.py          # Galerie Lard-chande & Le Bon Groin (Boutiques et P2P)
 │   ├── market.py           # marché, bid, sell-pig
 │   ├── abattoir.py         # abattoir, cimetière
+│   ├── blackjack.py        # Groin Jack — blackjack porcin
+│   ├── truffes.py          # Jeu des Truffes — grille 20x20
 │   ├── admin.py            # panneau admin complet (sidebar, 7 sections, SMTP, users)
-│   └── api.py              # vétérinaire, countdown, pig API, prix-groin
+│   ├── api.py              # vétérinaire, countdown, pig API, live-state
+│   └── health.py           # Health check /health
 │
-├── templates/
-│   ├── _site_header.html    # Header partagé / navigation principale
-│   ├── index.html           # Dashboard d'accueil — course du jour, tickets Bacon, actu & paris
-│   ├── courses.html         # Calendrier des courses et planification
-│   ├── auth.html            # Inscription / Connexion
-│   ├── profil.html          # Mon Profil — compte, stats joueur, changement mdp
-│   ├── history.html         # Historique complet : courses, paris et journal BitGroins
-│   ├── mon_cochon.html      # Tamagotchi — stats, nourrir, entraîner, école, radar chart
-│   ├── bourse.html          # Bourse aux Grains — grille 5x5, curseur partagé, vitrine
-│   ├── marche.html          # Marché aux Cochons — enchères
-│   ├── classement.html      # Classement général des joueurs
-│   ├── galerie_lard_chande.html # Hub des boutiques et petites annonces
-│   ├── shop_detail.html     # Vitrine d'une boutique spécifique
-│   ├── le_bon_groin.html    # La marketplace d'objets entre joueurs
-│   ├── legendes_pop.html    # Légendes porcines de la pop culture
-│   ├── abattoir.html        # L'Abattoir — vitrine de charcuterie
-│   ├── cimetiere.html       # Cimetière des Légendes — tombes des héros
-│   ├── veterinaire.html     # Urgence vétérinaire — puzzle de soin
-│   ├── veterinaire_lobby.html # Clinique / salle d'attente du véto
-│   ├── admin_base.html      # Layout admin partagé (sidebar + nav mobile)
-│   ├── admin_dashboard.html # Vue d'ensemble — stats, économie, actions rapides
-│   ├── admin_races.html     # Gestion courses — planning, marché, forcer/annuler
-│   ├── admin_pigs.html      # Gestion cochons — filtres, soigner, tuer/réanimer
-│   ├── admin_users.html     # Gestion joueurs — mdp, admin, solde, liens magiques
-│   ├── admin_events.html    # Événements globaux — nourriture, véto, bonus
-│   ├── admin_notifications.html # Config SMTP — test email, guide fournisseurs
-│   ├── admin_data.html      # CRUD données de jeu (liste céréales/entraînements/leçons)
-│   └── admin_data_form.html # Éditeur d'item (céréale/entraînement/leçon)
+├── helpers/                # Package helpers modulaire (8 modules)
+│   ├── __init__.py         # Re-exports pour compatibilité
+│   ├── config.py           # get_config, set_config, caching
+│   ├── db.py               # Row-level locking helpers
+│   ├── time_helpers.py     # Cooldown, formatage durées
+│   ├── veterinary.py       # Deadlines véto, logique abattoir
+│   ├── race.py             # Planification courses, cotes, historique
+│   ├── game_data.py        # Cache céréales/trainings/leçons (TTL 5min)
+│   └── market_helpers.py   # Statut unlock marché
 │
-└── instance/
-    └── derby.db            # Base SQLite (créée au lancement)
+├── services/               # Couche logique métier (7 modules)
+│   ├── finance_service.py  # Transactions BitGroins atomiques
+│   ├── pig_service.py      # Création cochon, stats, poids
+│   ├── race_service.py     # Résolution courses, XP, récompenses
+│   ├── market_service.py   # Enchères, remboursement auto
+│   ├── galerie_service.py  # Boutiques + marketplace P2P
+│   ├── marketplace_service.py
+│   └── game_settings_service.py
+│
+├── templates/              # 32 templates Jinja2
+│   ├── _site_header.html   # Header partagé / navigation principale
+│   ├── index.html          # Dashboard d'accueil
+│   ├── courses.html        # Calendrier des courses (groupé par jour)
+│   ├── race_circuit.html   # Circuit Live SVG 2D
+│   ├── mon_cochon.html     # Tamagotchi — stats, nourrir, entraîner, radar chart
+│   ├── bourse.html         # Bourse aux Grains
+│   ├── marche.html         # Marché aux Cochons — enchères
+│   ├── classement.html     # Classement (5 onglets)
+│   ├── history.html        # Historique (3 onglets)
+│   ├── admin_*.html        # Admin dashboard + 6 sous-pages
+│   └── ...                 # + 20 autres pages
+│
+├── static/                 # CSS, JS, images
+├── instance/               # Base SQLite (dev local uniquement)
+└── tests/                  # Tests pytest
 ```
 
 ### Architecture modulaire
@@ -277,17 +299,20 @@ derby_des_groins/
 | Module | Rôle | Contenu |
 |--------|------|---------|
 | `extensions.py` | Objets partagés | `db = SQLAlchemy()`, `APP_TIMEZONE` |
-| `models.py` | Schéma de données | 10 modèles : `User`, `Pig`, `Race`, `Participant`, `Bet`, `BalanceTransaction`, `CoursePlan`, `Auction`, `GameConfig`, `GrainMarket` |
-| `data.py` | Données statiques | Céréales, entraînements, école, raretés, origines, constantes d'équilibrage, grille Bourse |
-| `helpers.py` | Logique métier | Gestion cochon, balance atomique, paris, courses, marché, vétérinaire, Bourse aux Grains |
-| `scheduler.py` | Tâches de fond | Résolution courses, enchères, deadlines véto |
-| `routes/` | 9 Blueprints | Chaque domaine a son fichier avec ses routes |
-| `app.py` | Point d'entrée | Factory `create_app()`, migrations SQLite, seed utilisateurs |
+| `models.py` | Schéma de données | 19 modèles SQLAlchemy |
+| `data.py` | Données statiques | Céréales, entraînements, école, raretés, origines, constantes |
+| `helpers/` | Logique métier | 8 modules : config, DB, temps, véto, courses, game data, marché |
+| `services/` | Couche métier | 7 modules : finance, cochon, courses, enchères, boutiques |
+| `scheduler.py` | Tâches de fond | Résolution courses, enchères, deadlines véto, historique marché |
+| `routes/` | 14 Blueprints | Chaque domaine a son fichier avec ses routes |
+| `app.py` | Point d'entrée | Factory `create_app()`, migrations, seed utilisateurs |
 
 ## ⚙️ Stack technique
 
 - **Backend** : Flask + Flask-SQLAlchemy + Flask Blueprints
-- **Base de données** : SQLite
+- **Base de données** : PostgreSQL (Docker) / SQLite (dev local)
+- **Serveur WSGI** : Gunicorn (1 worker, 4 threads)
+- **Conteneurisation** : Docker Compose (web + PostgreSQL 16)
 - **Scheduler** : APScheduler (résolution des courses, enchères, blessures)
 - **Frontend** : Tailwind CSS (CDN) + Chart.js (radar chart) + Vanilla JS
 - **Fonts** : Lilita One, Nunito, Creepster (pour l'ambiance abattoir)

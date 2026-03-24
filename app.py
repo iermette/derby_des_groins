@@ -41,13 +41,17 @@ def create_app():
         'DATABASE_URL', 'sqlite:///derby.db'
     )
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-        'pool_pre_ping': True,
-        'pool_size': 10,
-        'max_overflow': 20,
-        'pool_timeout': 60,
-        'pool_recycle': 300,
-    }
+    db_url = app.config['SQLALCHEMY_DATABASE_URI']
+    if 'sqlite' in db_url:
+        app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'pool_pre_ping': True}
+    else:
+        app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+            'pool_pre_ping': True,
+            'pool_size': 10,
+            'max_overflow': 20,
+            'pool_timeout': 60,
+            'pool_recycle': 300,
+        }
     app.config['SCHEDULER_ENABLED'] = os.environ.get('DERBY_DISABLE_SCHEDULER', '0') != '1'
 
     db.init_app(app)
@@ -110,7 +114,7 @@ def migrate_db():
     migrations = [
         ('participant', 'pig_id', 'INTEGER'),
         ('participant', 'owner_name', 'VARCHAR(80)'),
-        ('pig', 'is_alive', 'BOOLEAN DEFAULT 1'),
+        ('pig', 'is_alive', 'BOOLEAN DEFAULT TRUE'),
         ('pig', 'death_date', 'DATETIME'),
         ('pig', 'death_cause', 'VARCHAR(30)'),
         ('pig', 'charcuterie_type', 'VARCHAR(50)'),
@@ -118,18 +122,18 @@ def migrate_db():
         ('pig', 'epitaph', 'VARCHAR(200)'),
         ('pig', 'challenge_mort_wager', 'FLOAT DEFAULT 0'),
         ('pig', 'max_races', 'INTEGER DEFAULT 80'),
-        ('pig', 'rarity', 'VARCHAR(20) DEFAULT "commun"'),
-        ('pig', 'origin_country', 'VARCHAR(30) DEFAULT "France"'),
-        ('pig', 'origin_flag', 'VARCHAR(10) DEFAULT "🇫🇷"'),
+        ('pig', 'rarity', "VARCHAR(20) DEFAULT 'commun'"),
+        ('pig', 'origin_country', "VARCHAR(30) DEFAULT 'France'"),
+        ('pig', 'origin_flag', "VARCHAR(10) DEFAULT '🇫🇷'"),
         ('pig', 'last_school_at', 'DATETIME'),
         ('pig', 'last_fed_at', 'DATETIME'),
         ('pig', 'last_interaction_at', 'DATETIME'),
-        ('pig', 'comeback_bonus_ready', 'BOOLEAN DEFAULT 0'),
+        ('pig', 'comeback_bonus_ready', 'BOOLEAN DEFAULT FALSE'),
         ('pig', 'school_sessions_completed', 'INTEGER DEFAULT 0'),
         ('pig', 'weight_kg', 'FLOAT DEFAULT 112.0'),
         ('pig', 'freshness', 'FLOAT DEFAULT 100.0'),
-        ('pig', 'ever_bad_state', 'BOOLEAN DEFAULT 0'),
-        ('pig', 'is_injured', 'BOOLEAN DEFAULT 0'),
+        ('pig', 'ever_bad_state', 'BOOLEAN DEFAULT FALSE'),
+        ('pig', 'is_injured', 'BOOLEAN DEFAULT FALSE'),
         ('pig', 'injury_risk', 'FLOAT DEFAULT 10.0'),
         ('pig', 'vet_deadline', 'DATETIME'),
         ('pig', 'lineage_name', 'VARCHAR(80)'),
@@ -137,9 +141,9 @@ def migrate_db():
         ('pig', 'lineage_boost', 'FLOAT DEFAULT 0'),
         ('pig', 'sire_id', 'INTEGER'),
         ('pig', 'dam_id', 'INTEGER'),
-        ('pig', 'retired_into_heritage', 'BOOLEAN DEFAULT 0'),
+        ('pig', 'retired_into_heritage', 'BOOLEAN DEFAULT FALSE'),
         ('user', 'email', 'VARCHAR(200)'),
-        ('user', 'is_admin', 'BOOLEAN DEFAULT 0'),
+        ('user', 'is_admin', 'BOOLEAN DEFAULT FALSE'),
         ('user', 'last_relief_at', 'DATETIME'),
         ('user', 'barn_heritage_bonus', 'FLOAT DEFAULT 0'),
         ('user', 'snack_shares_today', 'INTEGER DEFAULT 0'),
@@ -153,7 +157,7 @@ def migrate_db():
         ('auction', 'pig_weight', 'FLOAT DEFAULT 112.0'),
         ('auction', 'pig_origin', 'VARCHAR(30)'),
         ('auction', 'pig_origin_flag', 'VARCHAR(10)'),
-        ('bet', 'bet_type', 'VARCHAR(20) DEFAULT "win"'),
+        ('bet', 'bet_type', "VARCHAR(20) DEFAULT 'win'"),
         ('bet', 'selection_order', 'VARCHAR(240)'),
         ('user', 'last_daily_reward_at', 'DATETIME'),
         ('user', 'last_truffe_at', 'DATETIME'),
@@ -164,16 +168,7 @@ def migrate_db():
         ('race', 'preview_segments_json', 'TEXT'),
     ]
     table_migrations = [
-        """CREATE TABLE IF NOT EXISTS trophy (
-            id INTEGER PRIMARY KEY,
-            user_id INTEGER NOT NULL,
-            code VARCHAR(50) NOT NULL,
-            label VARCHAR(80) NOT NULL,
-            emoji VARCHAR(10) NOT NULL DEFAULT '🏆',
-            description VARCHAR(255) NOT NULL,
-            pig_name VARCHAR(80),
-            earned_at DATETIME
-        )""",
+        'ALTER TABLE game_config ALTER COLUMN value TYPE TEXT',
     ]
     index_migrations = [
         'CREATE UNIQUE INDEX IF NOT EXISTS ux_trophy_user_code ON trophy(user_id, code)',
@@ -184,7 +179,7 @@ def migrate_db():
         # Index supplementaires pour la performance
         'CREATE INDEX IF NOT EXISTS ix_pig_user_alive ON pig(user_id, is_alive)',
         'CREATE INDEX IF NOT EXISTS ix_bet_user_status ON bet(user_id, status)',
-        'CREATE INDEX IF NOT EXISTS ix_user_username ON user(username)',
+        'CREATE INDEX IF NOT EXISTS ix_user_username ON "user"(username)',
         'CREATE INDEX IF NOT EXISTS ix_participant_race_pig ON participant(race_id, pig_id)',
         'CREATE INDEX IF NOT EXISTS ix_balance_tx_user ON balance_transaction(user_id)',
         'CREATE INDEX IF NOT EXISTS ix_course_plan_user_sched ON course_plan(user_id, scheduled_at)',
@@ -195,32 +190,49 @@ def migrate_db():
                 conn.execute(db.text(statement))
                 conn.commit()
             except Exception as e:
+                conn.rollback()
                 logger.warning("Migration table echouee: %s — %s", statement[:80], e)
         for table, col, col_type in migrations:
+            tbl = f'"{table}"'
             try:
-                conn.execute(db.text(f"SELECT {col} FROM {table} LIMIT 1"))
+                conn.execute(db.text(f"SELECT {col} FROM {tbl} LIMIT 1"))
+                conn.rollback()
             except Exception:
+                conn.rollback()
                 try:
-                    conn.execute(db.text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}"))
+                    conn.execute(db.text(f"ALTER TABLE {tbl} ADD COLUMN {col} {col_type}"))
                     conn.commit()
                 except Exception as e:
+                    conn.rollback()
                     logger.warning("Migration colonne echouee: %s.%s — %s", table, col, e)
         for statement in index_migrations:
             try:
                 conn.execute(db.text(statement))
                 conn.commit()
             except Exception as e:
+                conn.rollback()
                 logger.warning("Migration index echouee: %s — %s", statement[:80], e)
         try:
-            conn.execute(db.text("""
-                UPDATE course_plan
-                SET strategy_profile = json_object(
-                    'phase_1', COALESCE(strategy, 50),
-                    'phase_2', COALESCE(strategy, 50),
-                    'phase_3', COALESCE(strategy, 50)
-                )
-                WHERE strategy_profile IS NULL OR strategy_profile = ''
-            """))
+            if db.engine.dialect.name == 'sqlite':
+                conn.execute(db.text("""
+                    UPDATE course_plan
+                    SET strategy_profile = json_object(
+                        'phase_1', COALESCE(strategy, 50),
+                        'phase_2', COALESCE(strategy, 50),
+                        'phase_3', COALESCE(strategy, 50)
+                    )
+                    WHERE strategy_profile IS NULL OR strategy_profile = ''
+                """))
+            else:
+                conn.execute(db.text("""
+                    UPDATE course_plan
+                    SET strategy_profile = json_build_object(
+                        'phase_1', COALESCE(strategy, 50),
+                        'phase_2', COALESCE(strategy, 50),
+                        'phase_3', COALESCE(strategy, 50)
+                    )::text
+                    WHERE strategy_profile IS NULL OR strategy_profile = ''
+                """))
             conn.execute(db.text("""
                 UPDATE trophy
                 SET trophy_key = COALESCE(trophy_key, code),
@@ -228,6 +240,7 @@ def migrate_db():
             """))
             conn.commit()
         except Exception as e:
+            conn.rollback()
             logger.warning("Migration donnees echouee: %s", e)
 
 
@@ -241,11 +254,10 @@ def seed_users():
         {'username': 'Julien',     'pig_name': 'Flash McGroin',      'emoji': '🐖', 'origin': 'Japon'},
         {'username': 'Christophe', 'pig_name': 'Père Cochon',        'emoji': '🏆', 'origin': 'France', 'admin': True},
     ]
-    # Compte admin avec mdp par defaut uniquement en dev
-    if is_dev:
-        default_users.append(
-            {'username': 'admin', 'pig_name': 'Grand Admin', 'emoji': '👑', 'origin': 'France', 'admin': True, 'password': 'admin'},
-        )
+    # Compte admin avec mdp par defaut (changer le mot de passe apres deploiement)
+    default_users.append(
+        {'username': 'admin', 'pig_name': 'Grand Admin', 'emoji': '👑', 'origin': 'France', 'admin': True, 'password': 'admin'},
+    )
     for u in default_users:
         existing = User.query.filter_by(username=u['username']).first()
         if existing:

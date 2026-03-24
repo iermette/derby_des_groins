@@ -77,12 +77,9 @@
 
 | # | Tache | Effort | Detail |
 |---|-------|--------|--------|
-| 1 | **3.1** Creer `.env.example` | 2 min | SECRET_KEY, FLASK_DEBUG, DATABASE_URL, SMTP_*, etc. |
-| 2 | **3.2** Serveur WSGI Gunicorn | 5 min | `gunicorn -w 4 -b 0.0.0.0:5000 'app:create_app()'` |
-| 3 | **1.7** SMTP credentials en env vars | 10 min | Migrer smtp_password de GameConfig vers env vars |
-| 4 | **2.1** Migration SQLite → PostgreSQL | 2-4h | 1 writer SQLite = bloquant multi-users. Script migration a creer |
-| 5 | **2.7** Sessions server-side | 30 min | Flask-Session + Redis ou PostgreSQL |
-| 6 | **2.8** Rate limiting | 10 min | `flask-limiter` : login 5/min, paris 10/min, API 30/min |
+| 1 | **1.7** SMTP credentials en env vars | 10 min | Migrer smtp_password de GameConfig vers env vars |
+| 2 | **2.7** Sessions server-side | 30 min | Flask-Session + Redis ou PostgreSQL |
+| 3 | **2.8** Rate limiting | 10 min | `flask-limiter` : login 5/min, paris 10/min, API 30/min |
 
 ### Phase 6 — Caches supplementaires ✅
 - [x] **2.6b** Cache classement : cache memoire 5 min sur `_build_classement_data()`
@@ -110,6 +107,24 @@
   - Navigation par URL hash (#courses, #bitgroins, #paris)
   - Styles ring actif par onglet (yellow/cyan/pink)
 
+### Phase 8 — Dockerisation + PostgreSQL ✅
+- [x] **8.1** `Dockerfile` : image Python 3.12-slim, Gunicorn, healthcheck `/health`
+- [x] **8.2** `docker-compose.yml` : services `web` + `db` (PostgreSQL 16-alpine), volume persistant `derby_pgdata`
+- [x] **8.3** `docker-entrypoint.sh` : attente PostgreSQL + lancement Gunicorn (1 worker, 4 threads)
+- [x] **8.4** `.env.example` : documentation de toutes les variables d'environnement
+- [x] **8.5** `.dockerignore` : exclusion fichiers inutiles du build context
+- [x] **8.6** `requirements.txt` : ajout `gunicorn==22.0.0` + `psycopg2-binary==2.9.9`
+- [x] **8.7** Compatibilite PostgreSQL dans `app.py` `migrate_db()` :
+  - `BOOLEAN DEFAULT 1/0` → `TRUE/FALSE`
+  - Double quotes string defaults → single quotes
+  - `json_object()` → `json_build_object()` (dialect-aware)
+  - Table `trophy` creation redondante supprimee (`db.create_all()` suffit)
+  - Noms de table quotes (`"user"`) dans les migrations SQL brutes
+  - Pool engine conditionnel (SQLite vs PostgreSQL)
+- [x] **3.1** `.env.example` cree
+- [x] **3.2** Serveur WSGI Gunicorn configure
+- [x] **2.1** Migration SQLite → PostgreSQL terminee
+
 ### Bugfix ✅
 - [x] **BUG** Prime de pointage journaliere creditee en boucle (+15 a chaque page load)
   - Cause : `db.session.refresh(self)` ecrasait `last_daily_reward_at` avant le commit
@@ -128,8 +143,12 @@
 
 | Test | Comment |
 |------|---------|
+| Docker | `docker compose up --build` → les 2 services demarrent sans erreur |
+| Health | `curl http://localhost:5001/health` → `{"status": "ok", "database": "ok"}` |
+| Site | `http://localhost:5001/` → le jeu fonctionne, login OK |
+| Persistence | `docker compose down` puis `docker compose up` → les donnees persistent |
+| Clean start | `docker compose down -v` puis `docker compose up` → re-seed correct |
 | Securite | `curl -I /` : verifier Set-Cookie (HttpOnly, SameSite) |
 | Performance | `/classement` avec 50+ users : 6 queries au lieu de 400+ |
-| Health | `curl /health` → `{"status": "ok", "database": "ok"}` |
 | Redirect | Tester `/login?next=//evil.com` → doit rester sur le site |
 | Debug | Verifier que `FLASK_DEBUG` n'est pas active en prod |

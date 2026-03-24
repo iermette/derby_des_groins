@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from sqlalchemy import func, or_, update
+from sqlalchemy import func, or_, update, Numeric
 
 from data import EMERGENCY_RELIEF_AMOUNT, EMERGENCY_RELIEF_HOURS, EMERGENCY_RELIEF_THRESHOLD
 from extensions import db
@@ -35,7 +35,7 @@ def adjust_user_balance(user_id, delta, minimum_balance=None,
     stmt = update(User).where(User.id == user_id)
     if minimum_balance is not None:
         stmt = stmt.where(User.balance >= minimum_balance)
-    stmt = stmt.values(balance=func.round(User.balance + delta, 2)).returning(User.balance)
+    stmt = stmt.values(balance=func.round((User.balance + delta).cast(Numeric), 2)).returning(User.balance)
 
     row = db.session.execute(stmt).first()
     if not row:
@@ -132,7 +132,7 @@ def maybe_grant_emergency_relief(user):
             or_(User.last_relief_at.is_(None), User.last_relief_at <= cooldown_limit),
         )
         .values(
-            balance=func.round(User.balance + EMERGENCY_RELIEF_AMOUNT, 2),
+            balance=func.round((User.balance + EMERGENCY_RELIEF_AMOUNT).cast(Numeric), 2),
             last_relief_at=now,
         )
         .returning(User.balance)
