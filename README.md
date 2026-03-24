@@ -73,6 +73,7 @@ Chaque joueur possède un **cochon virtuel** qu'il doit développer comme un Tam
 - **Gérer le poids de forme** du cochon : trop léger ou trop lourd, et ses courses deviennent moins propres
 - **Envoyer à l'École porcine** pour répondre à des quiz tactiques et gagner des bonus de stats + XP
 - **Faire courir** automatiquement à l'heure configurée contre les cochons des autres joueurs et des PNJ
+- **Parier avec des limites** : mise entre 5 et 500 BitGroins, paris complexes (3+ selections) reserves aux joueurs dont le cochon participe
 - **Piloter la semaine** depuis un **dashboard d'accueil** qui met en avant la course du jour, le statut de ton cochon, tes paris restants et les derniers resultats
 - **Planifier les sorties** dans la page **Courses** avec une vue semaine / mois
 - **Parier** en simple, en **couple ordre** ou en **tierce ordre** avec des **Tickets Bacon** limites chaque semaine
@@ -193,14 +194,15 @@ La base de données SQLite est créée automatiquement au premier lancement avec
 
 ## 👥 Utilisateurs pré-configurés
 
-| Joueur | Cochon | Emoji | Mot de passe |
-|--------|--------|-------|-------------|
-| Emerson | Groin de Tonnerre | 🐗 | `mdp1234` |
-| Pascal | Le Baron du Lard | 🐷 | `mdp1234` |
-| Simon | Saucisse Turbo | 🌭 | `mdp1234` |
-| Edwin | Porcinator | 🐽 | `mdp1234` |
-| Julien | Flash McGroin | 🐖 | `mdp1234` |
-| Christophe | Père Cochon | 🏆 | `mdp1234` |
+| Joueur | Cochon | Emoji | Mot de passe | Admin |
+|--------|--------|-------|-------------|-------|
+| Emerson | Groin de Tonnerre | 🐗 | `mdp1234` | |
+| Pascal | Le Baron du Lard | 🐷 | `mdp1234` | |
+| Simon | Saucisse Turbo | 🌭 | `mdp1234` | |
+| Edwin | Porcinator | 🐽 | `mdp1234` | |
+| Julien | Flash McGroin | 🐖 | `mdp1234` | |
+| Christophe | Père Cochon | 🏆 | `mdp1234` | ✅ |
+| admin | Grand Admin | 👑 | `admin` | ✅ |
 
 Note de demo:
 - Le compte `Christophe` peut recevoir un second cochon seedé, `Patient Zero`, déjà blessé pour tester immédiatement le menu `Vétérinaire` et le puzzle de soins.
@@ -226,7 +228,7 @@ derby_des_groins/
 │
 ├── routes/                 # 9 Blueprints Flask
 │   ├── __init__.py         # Registre des blueprints
-│   ├── auth.py             # register, login, logout, profil
+│   ├── auth.py             # register, login, logout, profil, magic-link login
 │   ├── main.py             # index (dashboard), history, classement, légendes pop
 │   ├── race.py             # courses (calendrier), plan_course, place_bet
 │   ├── pig.py              # mon-cochon, adopt, feed, train, school, challenge, sacrifice
@@ -234,11 +236,11 @@ derby_des_groins/
 │   ├── galerie.py          # Galerie Lard-chande & Le Bon Groin (Boutiques et P2P)
 │   ├── market.py           # marché, bid, sell-pig
 │   ├── abattoir.py         # abattoir, cimetière
-│   ├── admin.py            # admin panel, config, force-race
+│   ├── admin.py            # panneau admin complet (sidebar, 7 sections, SMTP, users)
 │   └── api.py              # vétérinaire, countdown, pig API, prix-groin
 │
 ├── templates/
-│   ├── _site_header.html   # Header partagé / navigation principale
+│   ├── _site_header.html    # Header partagé / navigation principale
 │   ├── index.html           # Dashboard d'accueil — course du jour, tickets Bacon, actu & paris
 │   ├── courses.html         # Calendrier des courses et planification
 │   ├── auth.html            # Inscription / Connexion
@@ -255,7 +257,16 @@ derby_des_groins/
 │   ├── abattoir.html        # L'Abattoir — vitrine de charcuterie
 │   ├── cimetiere.html       # Cimetière des Légendes — tombes des héros
 │   ├── veterinaire.html     # Urgence vétérinaire — puzzle de soin
-│   └── veterinaire_lobby.html # Clinique / salle d'attente du véto
+│   ├── veterinaire_lobby.html # Clinique / salle d'attente du véto
+│   ├── admin_base.html      # Layout admin partagé (sidebar + nav mobile)
+│   ├── admin_dashboard.html # Vue d'ensemble — stats, économie, actions rapides
+│   ├── admin_races.html     # Gestion courses — planning, marché, forcer/annuler
+│   ├── admin_pigs.html      # Gestion cochons — filtres, soigner, tuer/réanimer
+│   ├── admin_users.html     # Gestion joueurs — mdp, admin, solde, liens magiques
+│   ├── admin_events.html    # Événements globaux — nourriture, véto, bonus
+│   ├── admin_notifications.html # Config SMTP — test email, guide fournisseurs
+│   ├── admin_data.html      # CRUD données de jeu (liste céréales/entraînements/leçons)
+│   └── admin_data_form.html # Éditeur d'item (céréale/entraînement/leçon)
 │
 └── instance/
     └── derby.db            # Base SQLite (créée au lancement)

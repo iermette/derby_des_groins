@@ -84,6 +84,15 @@ Liste des fonctionnalités et idées déjà implémentées dans le projet.
 - **Éditeur de Données (CRUD)** : Interface complète pour ajouter, modifier ou désactiver les Céréales, Entraînements et Leçons d'école sans toucher au code ni à la base de données brute.
 - **Seeding Automatique** : Migration automatique des données statiques (`data.py`) vers la base de données au premier lancement pour une flexibilité totale.
 
+## Audit des Paris et Performance (v2.1)
+- **Restriction paris complexes** : Les paris a 3+ selections (tierce, quarte, quinte, rafle) necessitent que le cochon du joueur participe a la course.
+- **Limites de mise** : Minimum 5 BitGroins, maximum 500 BitGroins par pari (`MIN_BET_RACE`, `MAX_BET_RACE`).
+- **Correction du calcul de cotes** : Suppression d'une fonction `calculate_bet_odds` dupliquee dans `helpers.py` qui omettait le facteur factoriel pour les paris non ordonnes, gonflant les cotes jusqu'a 122x. Une seule source de verite dans `race_service.py`.
+- **Reequilibrage des marges** : quarte 1.30 -> 1.18, quinte 1.35 -> 1.15, two_of_four 1.15 -> 1.10, rafle differenciee du quinte (order_matters=True, house_edge=1.45).
+- **Performance page d'accueil** : Reecriture de `build_course_schedule()` pour remplacer le pattern N+1 (10 962 appels SQL) par des requetes batch (~4 requetes). Temps de reponse : 19.3s -> 0.83s.
+- **Stabilite QueuePool** : Configuration du pool SQLAlchemy (pool_size=10, max_overflow=20, pool_recycle=300), ajout teardown_appcontext, limitation a 3 courses par tick du scheduler.
+- **Fix admin** : Correction du TypeError sur `/admin` lors du tri des participants avec `finish_position=None`.
+
 ## Achats et Équipements
 - **La Galerie Lard-chande** (`/galerie-lard-chande`) : Hub d'achats réunissant 5 boutiques thématiques pour vos cochons (sport, pop-culture, soin esthétique, etc.).
 - **Double Monnaie** : Les objets peuvent s'acheter soit en BitGroins réguliers (Glands), soit avec des Truffes.

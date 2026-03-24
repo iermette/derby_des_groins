@@ -65,11 +65,20 @@ derby_des_groins/
 │   ├── race.py             # Calendrier, planification, visualisation des courses
 │   ├── market.py           # Enchères et transactions de cochons
 │   ├── abattoir.py         # Hall des cochons morts / cimetière
-│   ├── admin.py            # Outils de gestion pour le maître du jeu
+│   ├── admin.py            # Panneau admin complet (7 sections, sidebar, SMTP, users)
 │   ├── blackjack.py        # Mini-jeu Groin Jack (blackjack porcin)
 │   ├── truffes.py          # Mini-jeu Jeu des Truffes (cherche-truffe)
 │   └── api.py              # Endpoints JSON pour l'UI dynamique + replay course
 ├── templates/              # Vues Jinja2 (v3.0 UI Responsive)
+│   ├── admin_base.html     # Layout admin partagé (sidebar + nav mobile)
+│   ├── admin_dashboard.html # Stats globales, économie, actions rapides
+│   ├── admin_races.html    # Planning courses, marché, forcer/annuler
+│   ├── admin_pigs.html     # Filtres cochons, soigner, tuer/réanimer
+│   ├── admin_users.html    # Gestion joueurs, mdp, admin, liens magiques, solde
+│   ├── admin_events.html   # Événements globaux
+│   ├── admin_notifications.html # Config SMTP + test email
+│   ├── admin_data.html     # CRUD céréales/entraînements/leçons
+│   └── admin_data_form.html # Éditeur d'item universel
 └── instance/               # Données locales SQLite
 ```
 
@@ -87,6 +96,14 @@ derby_des_groins/
 - `/blackjack` : Mini-jeu Groin Jack — blackjack porcin avec mise en BitGroins.
 - `/truffes` : Mini-jeu Jeu des Truffes — cherche-truffe sur grille 20×20.
 - `/race/live` : Replay animé de la dernière course tour par tour.
+- `/auth/magic/<token>` : Connexion par lien magique (généré par l'admin, expire 24h).
+- `/admin/dashboard` : Vue d'ensemble admin (stats, économie, actions rapides).
+- `/admin/races` : Planning des courses, marché, forcer/annuler des courses.
+- `/admin/pigs` : Gestion cochons avec filtres, soins, tuer/réanimer.
+- `/admin/users` : Gestion avancée des joueurs (mdp, admin, solde, liens magiques).
+- `/admin/events` : Événements globaux (nourriture, véto, bonus).
+- `/admin/notifications` : Configuration SMTP et test d'envoi d'emails.
+- `/admin/data` : CRUD des données de jeu (céréales, entraînements, leçons).
 
 ## Choix de Design
 L'esthétique repose sur un **"Premium Dark Mode"** avec des accents vibrants. L'UI utilise massivement Tailwind CSS pour la réactivité et Chart.js pour visualiser les statistiques de performance des cochons.
@@ -99,5 +116,5 @@ L'esthétique repose sur un **"Premium Dark Mode"** avec des accents vibrants. L
 
 ## Roadmap Future
 - **PMU Porcin Evolué** : Statistiques globales sur les cotes les plus rentables et tendances de gains.
-- **Webhooks & Alertes** : Notifications pour les fins d'enchères ou les résultats de courses majeures.
+- **Webhooks & Alertes** : ✅ Config SMTP en place. Reste : notifications automatiques (résultats de courses, fins d'enchères), intégration Slack/Teams.
 - **Saisons & Ligues** : Mise en place de championnats par divisions avec remise des prix saisonnière.

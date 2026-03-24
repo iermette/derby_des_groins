@@ -73,12 +73,15 @@ La nourriture ne s'achete plus a prix fixe. Tous les prix et la qualite des cere
 
 ## 4. Les Paris
 - Placez vos BitGroins sur les cochons participants (même ceux des autres joueurs !).
+- La mise doit etre entre **5 et 500 BitGroins** par pari.
 - Chaque joueur reçoit **3 Tickets Bacon par semaine** : il faut donc choisir ses tickets avec soin.
 - **Un seul ticket par course** est autorisé pour éviter les arbitrages faciles.
-- Trois formats sont disponibles :
+- Les **paris complexes** (3+ selections : tierce, quarte, quinte, rafle) ne sont accessibles que si **ton cochon participe a la course**.
+- Formats disponibles :
 - **Simple gagnant** : trouver le 1er.
 - **Couple ordre** : trouver les 2 premiers dans l'ordre.
 - **Tierce ordre** : trouver les 3 premiers dans l'ordre.
+- Et d'autres formats avances (quarte, quinte, rafle...) avec des cotes plus elevees.
 - Selon la difficulté du ticket et la cote calculée au moment de la mise, gagnez le pactole si ton pronostic est exact.
 - La page **Historique** conserve aussi chaque ticket, l'historique des courses et le journal des credits/debits BitGroins pour suivre les flux.
 

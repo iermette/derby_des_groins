@@ -92,6 +92,9 @@
 
 - Créer un système d'**écuries / clans** pour jouer en groupe.
 - Ajouter des **alertes et webhooks** vers Slack / Teams (résultats, enchères, urgences).
+  - ✅ Configuration SMTP et envoi d'emails en place (admin > Notifications).
+  - ✅ Liens magiques de connexion envoyés par email si SMTP configuré.
+  - Reste : notifications automatiques sur événements de jeu, intégration Slack/Teams.
 - Faire du trophée physique (`Le Saint Grouin`) un vrai prolongement social IRL du jeu.
 
 ## Menus et interfaces manquants
