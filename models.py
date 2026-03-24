@@ -15,6 +15,7 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(200), nullable=False)
     balance = db.Column(db.Float, default=100.0)
+    email = db.Column(db.String(200), nullable=True)
     is_admin = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_relief_at = db.Column(db.DateTime, nullable=True)

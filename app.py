@@ -97,6 +97,7 @@ def migrate_db():
         ('pig', 'sire_id', 'INTEGER'),
         ('pig', 'dam_id', 'INTEGER'),
         ('pig', 'retired_into_heritage', 'BOOLEAN DEFAULT 0'),
+        ('user', 'email', 'VARCHAR(200)'),
         ('user', 'is_admin', 'BOOLEAN DEFAULT 0'),
         ('user', 'last_relief_at', 'DATETIME'),
         ('user', 'barn_heritage_bonus', 'FLOAT DEFAULT 0'),

@@ -67,9 +67,22 @@ Liste des fonctionnalités et idées déjà implémentées dans le projet.
 - Classement live mis à jour à chaque tour avec barre de progression globale.
 - Données servies via un nouvel endpoint JSON dans `api.py`.
 
-## Infrastructure et Admin
-- **Configuration Admin** : Ajout de réglages dans le panneau d'administration pour les seuils de participants et les modes de gestion des courses vides.
-- **Historique étendu** : Les courses annulées apparaissent désormais dans l'historique pour une meilleure transparence.
+## Interface Admin v3
+- **Tableau de bord complet** : Vue d'ensemble des statistiques vitales (utilisateurs, cochons en vie, courses terminées, masse monétaire totale/moyenne, paris en attente).
+- **Gestion des Courses** :
+    - Interface de planification hebdomadaire avancée.
+    - Contrôle granulaire des paramètres (heure des courses, durée de la bourse, seuils de participants).
+    - Bouton "Force Race" pour déclencher une course immédiatement.
+    - Annulation de course sécurisée avec remboursement automatique des parieurs.
+- **Gestion des Joueurs** :
+    - Ajustement manuel des soldes (BitGroins) avec journalisation.
+    - Promotion/Rétrogradation des administrateurs.
+    - Réinitialisation de mot de passe et génération de **Liens Magiques** (connexion sécurisée par token de 24h).
+- **Gestion des Cochons** : Liste complète avec filtres de vie, fonctions de résurrection/mise à mort administrative et soin immédiat (bouton Heal).
+- **Événements Globaux** : Déclenchement manuel de bonus (pluie de nourriture, visite vétérinaire générale, bonus BitGroins pour tous).
+- **Configuration SMTP** : Panneau de réglage pour l'envoi d'emails (notifications, liens magiques) avec test d'envoi en direct.
+- **Éditeur de Données (CRUD)** : Interface complète pour ajouter, modifier ou désactiver les Céréales, Entraînements et Leçons d'école sans toucher au code ni à la base de données brute.
+- **Seeding Automatique** : Migration automatique des données statiques (`data.py`) vers la base de données au premier lancement pour une flexibilité totale.
 
 ## Achats et Équipements
 - **La Galerie Lard-chande** (`/galerie-lard-chande`) : Hub d'achats réunissant 5 boutiques thématiques pour vos cochons (sport, pop-culture, soin esthétique, etc.).

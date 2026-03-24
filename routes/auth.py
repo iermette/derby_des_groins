@@ -1,13 +1,14 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
+import json
 import random
 import math
 
 from extensions import db
 from models import User, Pig, Bet, Auction, Trophy
 from data import PIG_ORIGINS, BET_TYPES, RARITIES
-from helpers import get_market_unlock_progress, get_market_lock_reason
+from helpers import get_config, get_market_unlock_progress, get_market_lock_reason
 from services.finance_service import record_balance_transaction
 from services.pig_service import apply_origin_bonus, generate_weight_kg_for_profile, get_active_listing_count, build_unique_pig_name
 
@@ -65,6 +66,42 @@ def login():
             return redirect(next_url)
         return redirect(url_for('main.index'))
     return render_template('auth.html', mode='login')
+
+
+@auth_bp.route('/auth/magic/<token>')
+def magic_login(token):
+    """Connexion via lien magique genere par l'admin."""
+    from models import GameConfig
+    # Search all magic_token_* entries
+    configs = GameConfig.query.filter(GameConfig.key.like('magic_token_%')).all()
+    for cfg in configs:
+        try:
+            data = json.loads(cfg.value)
+        except (json.JSONDecodeError, TypeError):
+            continue
+        if data.get('token') != token:
+            continue
+        # Found matching token — check expiry
+        expires = datetime.fromisoformat(data['expires'])
+        if datetime.utcnow() > expires:
+            db.session.delete(cfg)
+            db.session.commit()
+            flash("Ce lien magique a expire.", "error")
+            return redirect(url_for('auth.login'))
+        # Valid token — log in
+        user = User.query.get(data['user_id'])
+        if not user:
+            flash("Utilisateur introuvable.", "error")
+            return redirect(url_for('auth.login'))
+        session['user_id'] = user.id
+        # Consume the token
+        db.session.delete(cfg)
+        db.session.commit()
+        flash(f"Bienvenue {user.username} ! Connecte via lien magique.", "success")
+        return redirect(url_for('main.index'))
+
+    flash("Lien magique invalide ou expire.", "error")
+    return redirect(url_for('auth.login'))
 
 
 @auth_bp.route('/logout')

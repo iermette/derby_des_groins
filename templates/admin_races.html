@@ -1,0 +1,143 @@
+{% extends "admin_base.html" %}
+{% block title %}🏁 Courses — Admin{% endblock %}
+
+{% block content %}
+<h1 class="font-title text-3xl text-white mb-1">🏁 Gestion des Courses</h1>
+<p class="text-white/40 font-semibold text-sm mb-6">Planning hebdomadaire, marche, courses a venir.</p>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <!-- GRILLE HORAIRE -->
+    <div class="card p-6">
+        <form method="POST" action="{{ url_for('admin.admin_save') }}">
+            <h2 class="font-title text-xl text-white mb-3">📅 Grille Hebdomadaire</h2>
+            <p class="text-white/40 text-xs font-semibold mb-4">Heures separees par des virgules (ex: 08:30, 12:00, 17:30).</p>
+
+            <div class="space-y-3 mb-6">
+                {% for i in range(7) %}
+                <div class="flex items-center gap-3">
+                    <label class="text-white/60 text-xs font-bold w-16 shrink-0">{{ jours[i] }}</label>
+                    <input type="text" name="schedule_{{ i }}"
+                           value="{{ config.schedule_dict.get(i|string, []) | join(', ') }}"
+                           placeholder="HH:MM, HH:MM..."
+                           class="input-admin flex-1 text-xs">
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-3 mb-6">
+                <p class="text-indigo-300/70 text-xs font-bold leading-relaxed">
+                    💡 Vide un jour pour ne pas planifier de courses automatiques ce jour-la.
+                </p>
+            </div>
+
+            <h2 class="font-title text-xl text-white mb-3 mt-6">🏪 Horaire du Marche</h2>
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div class="col-span-2">
+                    <label class="text-white/60 text-xs font-bold block mb-1">Jour</label>
+                    <select name="market_day" class="input-admin w-full">
+                        {% for i in range(7) %}
+                        <option value="{{ i }}" {% if config.market_day == i|string %}selected{% endif %}>{{ jours[i] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="text-white/60 text-xs font-bold block mb-1">Heure</label>
+                    <input type="number" name="market_hour" value="{{ config.market_hour }}" min="0" max="23" class="input-admin w-full">
+                </div>
+                <div>
+                    <label class="text-white/60 text-xs font-bold block mb-1">Minutes</label>
+                    <input type="number" name="market_minute" value="{{ config.market_minute }}" min="0" max="59" class="input-admin w-full">
+                </div>
+                <div class="col-span-2">
+                    <label class="text-white/60 text-xs font-bold block mb-1">Duree (minutes)</label>
+                    <input type="number" name="market_duration" value="{{ config.market_duration }}" min="15" max="1440" class="input-admin w-full">
+                </div>
+            </div>
+
+            <h2 class="font-title text-xl text-white mb-3 mt-6">⚙️ Courses Vides</h2>
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="text-white/60 text-xs font-bold block mb-1">Minimum reels</label>
+                    <input type="number" name="min_real_participants" value="{{ config.min_real_participants }}" min="0" max="8" class="input-admin w-full">
+                </div>
+                <div>
+                    <label class="text-white/60 text-xs font-bold block mb-1">Action</label>
+                    <select name="empty_race_mode" class="input-admin w-full">
+                        <option value="fill" {% if config.empty_race_mode == 'fill' %}selected{% endif %}>Remplir PNJ</option>
+                        <option value="cancel" {% if config.empty_race_mode == 'cancel' %}selected{% endif %}>Annuler</option>
+                    </select>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-admin w-full mt-4">💾 Sauvegarder</button>
+        </form>
+    </div>
+
+    <!-- COURSES À VENIR + FORCER -->
+    <div class="space-y-6">
+        <div class="card p-6">
+            <h2 class="font-title text-xl text-white mb-3">⚡ Forcer une course</h2>
+            <form method="POST" action="{{ url_for('admin.admin_force_race') }}">
+                <button type="submit" class="btn-danger w-full" onclick="return confirm('Lancer une course immediatement ?');">
+                    🏁 Lancer maintenant
+                </button>
+            </form>
+            <p class="text-white/30 text-xs font-semibold mt-2">Lance avec tous les cochons en forme + PNJ.</p>
+        </div>
+
+        <div class="card p-6">
+            <h2 class="font-title text-xl text-white mb-4">📅 Courses a venir ({{ upcoming_races|length }})</h2>
+            <div class="space-y-2 max-h-80 overflow-y-auto">
+                {% if upcoming_races %}
+                    {% for race in upcoming_races %}
+                    <div class="user-row p-3 flex items-center justify-between">
+                        <div>
+                            <p class="text-white font-bold text-sm">
+                                #{{ race.id }}
+                                <span class="ml-2 {% if race.status == 'open' %}text-green-400{% else %}text-yellow-400{% endif %} text-[10px] border border-current px-1 rounded">
+                                    {{ race.status | upper }}
+                                </span>
+                            </p>
+                            <p class="text-white/40 text-xs font-semibold">
+                                {{ race.scheduled_at.strftime('%d/%m a %H:%M') }}
+                                · {{ race.participants | length }} partants
+                                · {{ race.bets | length }} paris
+                            </p>
+                        </div>
+                        <form method="POST" action="{{ url_for('admin.admin_cancel_race', race_id=race.id) }}" onsubmit="return confirm('Annuler et rembourser ?');">
+                            <button type="submit" class="text-red-400 hover:text-red-300 text-xs font-bold uppercase">🗑️ Annuler</button>
+                        </form>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-white/20 text-sm italic py-4">Aucune course a venir.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- DERNIÈRES COURSES -->
+        {% if recent_races %}
+        <div class="card p-6">
+            <h2 class="font-title text-xl text-white mb-4">📜 Dernieres courses</h2>
+            <div class="space-y-2 max-h-80 overflow-y-auto">
+                {% for race in recent_races %}
+                <div class="result-card p-3">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-green-400 font-bold text-sm">#{{ race.id }}</span>
+                        <span class="text-white/30 text-xs">{{ race.finished_at.strftime('%d/%m %H:%M') if race.finished_at }}</span>
+                    </div>
+                    <p class="text-white font-bold text-sm">🥇 {{ race.winner_name }} <span class="text-white/40 text-xs">x{{ race.winner_odds }}</span></p>
+                    {% set sorted_parts = race.participants | selectattr('finish_position') | sort(attribute='finish_position') %}
+                    <div class="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
+                        {% for p in sorted_parts %}
+                        <span class="text-white/30 text-xs">{{ p.finish_position }}. {{ p.emoji }} {{ p.name }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
