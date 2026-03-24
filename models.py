@@ -67,13 +67,15 @@ class User(db.Model):
         today = datetime.utcnow().date()
         if self.last_daily_reward_at and self.last_daily_reward_at.date() >= today:
             return 0.0
+        # Marquer AVANT earn() pour eviter le double-credit en cas de race condition
+        self.last_daily_reward_at = datetime.utcnow()
+        db.session.flush()  # Persiste le timestamp dans la transaction
         self.earn(
             DAILY_LOGIN_REWARD,
             reason_code='daily_reward',
             reason_label='Prime de pointage journalière',
         )
-        self.last_daily_reward_at = datetime.utcnow()
-        # Refresh en mémoire car earn() utilise un SQL UPDATE
+        # Refresh le solde en memoire (earn() fait un SQL UPDATE atomique)
         db.session.refresh(self)
         return DAILY_LOGIN_REWARD
 
