@@ -5,6 +5,7 @@ models, services, and the race engine.
 """
 
 from datetime import datetime, timedelta
+import json
 import random
 
 from sqlalchemy import func
@@ -92,6 +93,9 @@ def ensure_next_race():
     race = Race(scheduled_at=next_time, status='open')
     db.session.add(race)
     db.session.flush()
+    # Pre-generate circuit segments so they can be previewed before the race
+    segments = generate_course_segments()
+    race.preview_segments_json = json.dumps(segments)
     populate_race_participants(
         race, respect_course_plans=True,
         allow_rebuild_if_bets=False, commit=True,
@@ -192,7 +196,11 @@ def run_race_if_needed():
                     'freshness': 100.0, 'is_happy': True,
                 })
 
-        segments = generate_course_segments()
+        # Reuse pre-generated segments if available, otherwise generate new ones
+        if race.preview_segments_json:
+            segments = json.loads(race.preview_segments_json)
+        else:
+            segments = generate_course_segments()
         manager = CourseManager(pigs_for_sim, segments)
         history = manager.run()
         race.replay_json = manager.to_json()

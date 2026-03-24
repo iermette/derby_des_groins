@@ -160,6 +160,7 @@ def migrate_db():
         ('trophy', 'pig_name', 'VARCHAR(80)'),
         ('trophy', 'trophy_key', 'VARCHAR(50)'),
         ('trophy', 'date_earned', 'DATETIME'),
+        ('race', 'preview_segments_json', 'TEXT'),
     ]
     table_migrations = [
         """CREATE TABLE IF NOT EXISTS trophy (

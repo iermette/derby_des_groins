@@ -534,6 +534,7 @@ class Race(db.Model):
     winner_odds = db.Column(db.Float, nullable=True)
     status = db.Column(db.String(20), default='upcoming')
     replay_json = db.Column(db.Text, nullable=True) # Detailed history as JSON
+    preview_segments_json = db.Column(db.Text, nullable=True)  # Segments pre-generated for circuit preview
     participants = db.relationship('Participant', backref='race', lazy=True)
     bets = db.relationship('Bet', backref='race', lazy=True)
 

@@ -124,6 +124,7 @@
             <div class="flex flex-wrap gap-2 text-xs font-bold">
               <button id="play-pause" class="rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-cyan-100 transition hover:bg-cyan-300/20">Pause</button>
               <button id="restart" class="rounded-xl border border-white/10 bg-white/10 px-4 py-2 text-white transition hover:bg-white/20">Recommencer</button>
+              <button id="circuit-btn" class="rounded-xl border border-amber-300/20 bg-amber-300/10 px-4 py-2 text-amber-100 transition hover:bg-amber-300/20">🏟️ Circuit Live</button>
               <button id="demo-btn" class="rounded-xl border border-emerald-300/20 bg-emerald-300/10 px-4 py-2 text-emerald-100 transition hover:bg-emerald-300/20">🎮 Démo</button>
             </div>
           </div>
@@ -935,6 +936,70 @@
     document.getElementById('strat-apply').addEventListener('click', loadDemo);
 
     loadReplay();
+
+    // ════════════════════════════════════════════════════════════════
+    //  CIRCUIT LIVE — Full-screen overlay + auto-trigger
+    // ════════════════════════════════════════════════════════════════
+    const circuitOverlay = document.createElement('div');
+    circuitOverlay.id = 'circuit-live-overlay';
+    circuitOverlay.style.cssText = 'position:fixed;inset:0;z-index:10000;display:none;';
+    circuitOverlay.innerHTML = '<iframe id="circuit-iframe" src="" style="width:100%;height:100%;border:none;"></iframe>';
+    document.body.appendChild(circuitOverlay);
+
+    let _circuitLastFinished = null;
+    let _circuitPhase = 'idle';
+
+    function openCircuit() {
+      const iframe = document.getElementById('circuit-iframe');
+      iframe.src = '/circuit';
+      circuitOverlay.style.display = 'block';
+    }
+
+    function closeCircuitOverlay() {
+      circuitOverlay.style.display = 'none';
+      const iframe = document.getElementById('circuit-iframe');
+      iframe.src = '';
+    }
+
+    // Close on Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && circuitOverlay.style.display === 'block') {
+        closeCircuitOverlay();
+      }
+    });
+
+    // Manual button
+    document.getElementById('circuit-btn').addEventListener('click', openCircuit);
+
+    // Polling to auto-open circuit when a race is about to start
+    async function pollForCircuit() {
+      try {
+        const resp = await fetch('/api/race/live-state');
+        const state = await resp.json();
+        const prev = _circuitPhase;
+        _circuitPhase = state.phase;
+
+        // Auto-open when entering pre_race phase
+        if (state.phase === 'pre_race' && prev === 'idle') {
+          openCircuit();
+        }
+
+        // Track finished race ID
+        if (state.finished_race_id) {
+          if (_circuitLastFinished === null) {
+            _circuitLastFinished = state.finished_race_id;
+          } else if (state.finished_race_id !== _circuitLastFinished) {
+            _circuitLastFinished = state.finished_race_id;
+            // Reload the main replay too
+            setTimeout(loadReplay, 2000);
+          }
+        }
+      } catch (e) { /* silent */ }
+    }
+
+    setInterval(pollForCircuit, 4000);
+    // Initial poll
+    setTimeout(pollForCircuit, 1000);
   </script>
 </body>
 </html>

@@ -1,8 +1,9 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify
 from datetime import datetime
+import json as _json
 
 from extensions import db
-from models import User, Pig, Race, Participant
+from models import User, Pig, Race, Participant, Bet
 from data import SCHOOL_COOLDOWN_MINUTES, MIN_INJURY_RISK, DEFAULT_PIG_WEIGHT_KG
 from helpers import (
     get_user_active_pigs, calculate_pig_power,
@@ -214,6 +215,122 @@ def api_latest_race_replay():
     if not race:
         return jsonify({'error': 'Aucune course terminee, les cochons sont encore en pyjama'}), 404
     return api_race_replay(race.id)
+
+
+@api_bp.route('/api/race/live-state')
+def api_race_live_state():
+    """Central synchronization endpoint for the circuit overlay.
+
+    Returns the current phase of the race lifecycle so all connected clients
+    can show the same overlay at the same time.
+    """
+    now = datetime.now()
+
+    # Latest finished race (for replay)
+    last_finished = Race.query.filter_by(status='finished').order_by(Race.finished_at.desc()).first()
+    finished_race_id = last_finished.id if last_finished else None
+
+    # Next open race
+    next_race = Race.query.filter_by(status='open').order_by(Race.scheduled_at).first()
+    if not next_race:
+        return jsonify({
+            'phase': 'idle',
+            'race_id': None,
+            'seconds_to_start': None,
+            'finished_race_id': finished_race_id,
+            'server_time': now.isoformat(),
+        })
+
+    seconds = int((next_race.scheduled_at - now).total_seconds())
+
+    if seconds > 50:
+        phase = 'idle'
+    elif seconds > 10:
+        phase = 'pre_race'
+    elif seconds > 0:
+        phase = 'countdown'
+    else:
+        phase = 'racing'  # Race is due but not yet processed by scheduler
+
+    return jsonify({
+        'phase': phase,
+        'race_id': next_race.id,
+        'seconds_to_start': max(0, seconds),
+        'finished_race_id': finished_race_id,
+        'server_time': now.isoformat(),
+    })
+
+
+@api_bp.route('/api/race/<int:race_id>/pre-race')
+def api_race_pre_race(race_id):
+    """Returns participant lineup + circuit segments for the pre-race overlay."""
+    race = Race.query.get(race_id)
+    if not race:
+        return jsonify({'error': 'Course introuvable'}), 404
+
+    participants = Participant.query.filter_by(race_id=race.id).all()
+
+    # Parse pre-generated segments
+    segments = []
+    if race.preview_segments_json:
+        try:
+            segments = _json.loads(race.preview_segments_json)
+        except (ValueError, TypeError):
+            pass
+
+    return jsonify({
+        'race_id': race.id,
+        'scheduled_at': race.scheduled_at.strftime('%H:%M') if race.scheduled_at else None,
+        'status': race.status,
+        'segments': segments,
+        'participants': [
+            {
+                'id': p.id,
+                'name': p.name,
+                'emoji': p.emoji,
+                'odds': round(p.odds, 2) if p.odds else None,
+                'win_probability': round(p.win_probability, 3) if p.win_probability else None,
+                'owner_name': p.owner_name,
+                'pig_id': p.pig_id,
+                'strategy': p.strategy,
+            }
+            for p in participants
+        ],
+    })
+
+
+@api_bp.route('/api/race/<int:race_id>/bets-spectator')
+def api_race_bets_spectator(race_id):
+    """Returns all bets placed on a race for spectator view (anonymized amounts)."""
+    race = Race.query.get(race_id)
+    if not race:
+        return jsonify({'error': 'Course introuvable'}), 404
+
+    bets = Bet.query.filter_by(race_id=race.id).all()
+    participants_by_id = {
+        p.id: p for p in Participant.query.filter_by(race_id=race.id).all()
+    }
+
+    bets_data = []
+    for bet in bets:
+        user = User.query.get(bet.user_id)
+        bets_data.append({
+            'username': user.username if user else '???',
+            'pig_name': bet.pig_name,
+            'bet_type': getattr(bet, 'bet_type', 'win'),
+            'amount': bet.amount,
+            'odds': round(bet.odds_at_bet, 2) if bet.odds_at_bet else None,
+            'status': bet.status,
+        })
+
+    return jsonify({'race_id': race.id, 'bets': bets_data})
+
+
+@api_bp.route('/circuit')
+def race_circuit():
+    """Page du circuit live — visualisation plein ecran."""
+    user = User.query.get(session['user_id']) if 'user_id' in session else None
+    return render_template('race_circuit.html', user=user, active_page='circuit')
 
 
 @api_bp.route('/live')
