@@ -2,7 +2,6 @@ from flask import Blueprint, render_template, redirect, url_for, session, flash,
 from datetime import datetime, timedelta
 
 from extensions import db, limiter
-from models import User, Pig, BalanceTransaction
 from models import User, Pig, BalanceTransaction, MarketHistory
 from data import BOURSE_BLOCK_MIN, BOURSE_BLOCK_MAX, BOURSE_GRAIN_LAYOUT
 from helpers import get_feeding_cost_multiplier, get_user_active_pigs, get_cereals_dict
@@ -21,6 +20,9 @@ def bourse():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     user = User.query.get(session['user_id'])
+    if not user:
+        session.pop('user_id', None)
+        return redirect(url_for('auth.login'))
 
     market = get_grain_market()
     movement_points = get_bourse_movement_points(user.id)
@@ -80,6 +82,9 @@ def bourse_move():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     user = User.query.get(session['user_id'])
+    if not user:
+        session.pop('user_id', None)
+        return redirect(url_for('auth.login'))
 
     dx = request.form.get('dx', 0, type=int)
     dy = request.form.get('dy', 0, type=int)
@@ -113,6 +118,9 @@ def bourse_buy():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     user = User.query.get(session['user_id'])
+    if not user:
+        session.pop('user_id', None)
+        return redirect(url_for('auth.login'))
 
     cereal_key = request.form.get('cereal')
     pig_id = request.form.get('pig_id', type=int)

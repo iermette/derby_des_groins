@@ -941,7 +941,12 @@ document.addEventListener('DOMContentLoaded', () => {
         window._latestReplay = replay;
       }
     })
-    .catch(() => {});
+    .catch(e => console.warn('[circuit] Erreur chargement replay initial', e));
+
+  window.addEventListener('beforeunload', () => {
+    if (pollTimer) clearInterval(pollTimer);
+    if (playInterval) clearTimeout(playInterval);
+  });
 });
 
 // Allow external trigger (from race_live.html via postMessage)

@@ -530,7 +530,7 @@ function formatTime(seconds) {
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 let countdownSeconds = null;
-async function fetchCountdown() { try { const res = await fetch('/api/countdown'); const data = await res.json(); countdownSeconds = data.seconds; } catch (e) {} }
+async function fetchCountdown() { try { const res = await fetch('/api/countdown'); const data = await res.json(); countdownSeconds = data.seconds; } catch (e) { console.warn('[index] Erreur fetch countdown', e); } }
 function tickCountdown() {
     const display = document.getElementById('countdown-display'), running = document.getElementById('race-running-msg');
     if (!display) return;
@@ -538,7 +538,10 @@ function tickCountdown() {
     if (countdownSeconds <= 0) { display.textContent = '00:00:00'; if (running) running.classList.remove('hidden'); setTimeout(() => location.reload(), 3000); return; }
     display.textContent = formatTime(countdownSeconds); countdownSeconds--;
 }
-fetchCountdown(); setInterval(tickCountdown, 1000); setInterval(fetchCountdown, 30000);
+fetchCountdown();
+const _tickTimer = setInterval(tickCountdown, 1000);
+const _fetchTimer = setInterval(fetchCountdown, 30000);
+window.addEventListener('beforeunload', () => { clearInterval(_tickTimer); clearInterval(_fetchTimer); });
 </script>
 </body>
 </html>

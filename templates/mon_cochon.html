@@ -757,6 +757,8 @@
         document.getElementById('avatar-input-' + pigId).value = avatarId;
     }
 
+    const _vetTimers = [];
+
     function startVetCountdowns() {
         document.querySelectorAll('.vet-countdown').forEach(el => {
             let seconds = Number(el.dataset.seconds || 0);
@@ -773,15 +775,16 @@
             };
             render();
             if (seconds <= 0) return;
-            setInterval(() => {
+            _vetTimers.push(setInterval(() => {
                 if (seconds <= 0) return;
                 seconds -= 1;
                 render();
-            }, 1000);
+            }, 1000));
         });
     }
 
     startVetCountdowns();
+    window.addEventListener('beforeunload', () => _vetTimers.forEach(clearInterval));
 </script>
 
 </body>

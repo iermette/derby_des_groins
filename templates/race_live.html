@@ -1003,12 +1003,17 @@
             setTimeout(loadReplay, 2000);
           }
         }
-      } catch (e) { /* silent */ }
+      } catch (e) { console.warn('[live] Erreur poll circuit', e); }
     }
 
-    setInterval(pollForCircuit, 4000);
+    const _circuitPollTimer = setInterval(pollForCircuit, 4000);
     // Initial poll
     setTimeout(pollForCircuit, 1000);
+
+    window.addEventListener('beforeunload', () => {
+      clearInterval(_circuitPollTimer);
+      if (timer) clearInterval(timer);
+    });
   </script>
 </body>
 </html>

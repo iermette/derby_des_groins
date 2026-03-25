@@ -20,6 +20,9 @@ def veterinaire(pig_id):
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     user = User.query.get(session['user_id'])
+    if not user:
+        session.pop('user_id', None)
+        return redirect(url_for('auth.login'))
     pig = Pig.query.get(pig_id)
     if not pig or pig.user_id != user.id:
         return redirect(url_for('pig.mon_cochon'))
@@ -36,6 +39,9 @@ def veterinaire_index():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     user = User.query.get(session['user_id'])
+    if not user:
+        session.pop('user_id', None)
+        return redirect(url_for('auth.login'))
     injured_pig = get_first_injured_pig(user.id)
     if injured_pig:
         return redirect(url_for('api.veterinaire', pig_id=injured_pig.id))
@@ -71,6 +77,9 @@ def vet_solve():
     if 'user_id' not in session:
         return jsonify({'error': 'Non connecté'}), 401
     user = User.query.get(session['user_id'])
+    if not user:
+        session.pop('user_id', None)
+        return jsonify({'error': 'Session invalide'}), 401
     payload = request.get_json(silent=True) or {}
     pig_id = payload.get('pig_id')
     pig = Pig.query.get(pig_id)
@@ -99,6 +108,9 @@ def vet_timeout():
     if 'user_id' not in session:
         return jsonify({'error': 'Non connecté'}), 401
     user = User.query.get(session['user_id'])
+    if not user:
+        session.pop('user_id', None)
+        return jsonify({'error': 'Session invalide'}), 401
     payload = request.get_json(silent=True) or {}
     pig_id = payload.get('pig_id')
     pig = Pig.query.get(pig_id)
@@ -147,6 +159,9 @@ def api_pig():
     if 'user_id' not in session:
         return jsonify({'error': 'Non connecté'}), 401
     user = User.query.get(session['user_id'])
+    if not user:
+        session.pop('user_id', None)
+        return jsonify({'error': 'Session invalide'}), 401
     pig = Pig.query.filter_by(user_id=user.id, is_alive=True).first()
     if not pig:
         return jsonify({'error': 'Pas de cochon'}), 404
@@ -334,9 +349,6 @@ def api_race_bets_spectator(race_id):
         return jsonify({'error': 'Course introuvable'}), 404
 
     bets = Bet.query.filter_by(race_id=race.id).all()
-    participants_by_id = {
-        p.id: p for p in Participant.query.filter_by(race_id=race.id).all()
-    }
 
     bets_data = []
     for bet in bets:

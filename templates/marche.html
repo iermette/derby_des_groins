@@ -499,8 +499,10 @@
 
 <script>
 // ─── COUNTDOWNS ENCHÈRES ────────────────────────────────────────────────
+const _countdownEls = Array.from(document.querySelectorAll('.countdown-auction'));
+
 function updateCountdowns() {
-    document.querySelectorAll('.countdown-auction').forEach(el => {
+    _countdownEls.forEach(el => {
         const endsAt = new Date(el.dataset.ends + 'Z'); // UTC
         const now = new Date();
         const diff = Math.max(0, Math.floor((endsAt - now) / 1000));
@@ -525,7 +527,7 @@ function updateCountdowns() {
 }
 
 updateCountdowns();
-setInterval(updateCountdowns, 1000);
+const _countdownTimer = setInterval(updateCountdowns, 1000);
 
 // ─── PRIX MOYEN LIVE ────────────────────────────────────────────────
 async function updatePrixGroin() {
@@ -534,9 +536,14 @@ async function updatePrixGroin() {
         const data = await res.json();
         const el = document.getElementById('prix-groin');
         if (el) el.textContent = data.prix.toFixed(2);
-    } catch(e) {}
+    } catch(e) { console.warn('[marche] Erreur mise à jour prix groin', e); }
 }
-setInterval(updatePrixGroin, 30000);
+const _prixTimer = setInterval(updatePrixGroin, 30000);
+
+window.addEventListener('beforeunload', () => {
+    clearInterval(_countdownTimer);
+    clearInterval(_prixTimer);
+});
 
 // ─── TABS & FILTRES ────────────────────────────────────────────────
 function switchTab(tab) {

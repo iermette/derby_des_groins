@@ -151,7 +151,8 @@ def place_bet():
         return redirect(url_for('main.index'))
 
     if expected_count >= COMPLEX_BET_MIN_SELECTIONS:
-        user_has_pig_in_race = any(p.pig_id and p.pig_id in [pig.id for pig in Pig.query.filter_by(user_id=user.id, is_alive=True).all()] for p in participants)
+        user_pig_ids = {pig.id for pig in get_user_active_pigs(user)}
+        user_has_pig_in_race = any(p.pig_id and p.pig_id in user_pig_ids for p in participants)
         if not user_has_pig_in_race:
             flash("Les paris complexes (3+ cochons) necessitent que ton cochon participe a la course.", "warning")
             return redirect(url_for('main.index'))
