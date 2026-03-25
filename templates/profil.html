@@ -106,7 +106,7 @@
 
 {% include "_site_header.html" %}
 
-<main class="max-w-6xl mx-auto px-4 py-8 pb-12">
+<main class="max-w-6xl mx-auto px-4 py-8">
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
     <div class="mb-8 space-y-2">
@@ -371,5 +371,6 @@
     </div>
 </main>
 
+{% include '_footer.html' %}
 </body>
 </html>

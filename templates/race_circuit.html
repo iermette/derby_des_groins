@@ -21,11 +21,23 @@
                   #080d1a;
     }
     #stats-panel {
-      width: 340px; flex-shrink: 0;
+      width: 300px; flex-shrink: 0;
       background: linear-gradient(180deg, rgba(15,10,30,0.98), rgba(8,6,18,0.99));
       border-left: 1px solid rgba(255,255,255,0.06);
       overflow-y: auto;
       padding: 1rem;
+    }
+
+    /* Mobile : layout vertical, panel en bas */
+    @media (max-width: 767px) {
+      #circuit-wrap { flex-direction: column; }
+      #svg-area { flex: 1; min-height: 0; }
+      #stats-panel {
+        width: 100%;
+        height: 40vh;
+        border-left: none;
+        border-top: 1px solid rgba(255,255,255,0.06);
+      }
     }
 
     /* ── Track path styling ── */

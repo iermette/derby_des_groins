@@ -543,5 +543,6 @@ const _tickTimer = setInterval(tickCountdown, 1000);
 const _fetchTimer = setInterval(fetchCountdown, 30000);
 window.addEventListener('beforeunload', () => { clearInterval(_tickTimer); clearInterval(_fetchTimer); });
 </script>
+{% include '_footer.html' %}
 </body>
 </html>
