@@ -1,3 +1,4 @@
+{% from '_pig_avatar.html' import pig_display %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -165,7 +166,7 @@
                         <span class="text-white/45">Meilleur champion</span>
                         <span class="text-white">
                             {% if best_pig %}
-                            {{ best_pig.emoji }} {{ best_pig.name }}
+                            {{ pig_display(best_pig, 'text-sm', 18) }} {{ best_pig.name }}
                             {% else %}
                             Aucun pour l'instant
                             {% endif %}
@@ -293,7 +294,7 @@
                         {% for pig in pigs[:5] %}
                         <div class="pig-pill p-4 flex items-center justify-between gap-4">
                             <div class="flex items-center gap-3">
-                                <span class="text-3xl">{{ pig.emoji }}</span>
+                                <span>{{ pig_display(pig, 'text-3xl', 40) }}</span>
                                 <div>
                                     <p class="text-white font-bold">{{ pig.name }}</p>
                                     <p class="text-white/40 text-xs font-semibold">

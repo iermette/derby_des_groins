@@ -162,7 +162,8 @@ def api_pig():
         'school_cooldown': get_cooldown_remaining(pig.last_school_at, SCHOOL_COOLDOWN_MINUTES),
         'is_injured': pig.is_injured,
         'injury_risk': round(pig.injury_risk or MIN_INJURY_RISK, 1),
-        'vet_seconds_left': get_seconds_until(pig.vet_deadline) if pig.is_injured else 0
+        'vet_seconds_left': get_seconds_until(pig.vet_deadline) if pig.is_injured else 0,
+        'avatar_url': pig.avatar_url,
     })
 
 
@@ -193,11 +194,18 @@ def api_race_replay(race_id):
         replay = raw
 
     participants_db = Participant.query.filter_by(race_id=race_id).all()
+    pig_avatars = {}
+    pig_ids = [p.pig_id for p in participants_db if p.pig_id]
+    if pig_ids:
+        from models import Pig as PigModel
+        for pig in PigModel.query.filter(PigModel.id.in_(pig_ids)).all():
+            pig_avatars[pig.id] = pig.avatar_url
     participant_meta = {
         str(p.id): {
             'emoji': p.emoji,
             'owner': p.owner_name,
             'finish_position': p.finish_position,
+            'avatar_url': pig_avatars.get(p.pig_id),
         }
         for p in participants_db
     }
@@ -270,6 +278,13 @@ def api_race_pre_race(race_id):
 
     participants = Participant.query.filter_by(race_id=race.id).all()
 
+    pre_pig_ids = [p.pig_id for p in participants if p.pig_id]
+    pre_pig_avatars = {}
+    if pre_pig_ids:
+        from models import Pig as PigModel
+        for pig in PigModel.query.filter(PigModel.id.in_(pre_pig_ids)).all():
+            pre_pig_avatars[pig.id] = pig.avatar_url
+
     # Parse pre-generated segments
     segments = []
     if race.preview_segments_json:
@@ -293,6 +308,7 @@ def api_race_pre_race(race_id):
                 'owner_name': p.owner_name,
                 'pig_id': p.pig_id,
                 'strategy': p.strategy,
+                'avatar_url': pre_pig_avatars.get(p.pig_id),
             }
             for p in participants
         ],

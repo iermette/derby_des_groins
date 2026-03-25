@@ -130,6 +130,36 @@
   - Cause : `db.session.refresh(self)` ecrasait `last_daily_reward_at` avant le commit
   - Fix : flush le timestamp AVANT earn() pour le persister dans la transaction
 
+### Phase 9 — Avatars cochons (pixel art) ✅
+- [x] **9.1** Modele `PigAvatar` : bibliotheque d'avatars geree par l'admin
+  - Champs : `name`, `filename`, `format` (png/svg), `created_at`
+  - FK `Pig.avatar_id` → reference optionnelle vers un avatar
+  - Propriete `Pig.avatar_url` pour acces direct au fichier
+- [x] **9.2** Page admin `/admin/avatars` : gestion complete
+  - Upload de fichiers PNG (64x64 pixel art) ou SVG
+  - Collage de code SVG directement dans un textarea
+  - Suppression d'avatar (delie automatiquement les cochons associes)
+  - Lien ajoute dans la sidebar admin
+- [x] **9.3** Selecteur d'avatar joueur sur `/mon-cochon`
+  - Grille visuelle des avatars disponibles sous le selecteur d'emoji
+  - Option "Pas d'avatar" pour revenir a l'emoji par defaut
+  - Persistance via `POST /choose-avatar`
+- [x] **9.4** Macro Jinja2 `_pig_avatar.html`
+  - `pig_display(pig, size_class, img_size)` : affiche `<img>` si avatar, sinon `<span>` emoji
+  - `style="image-rendering: pixelated"` pour le rendu pixel art net
+- [x] **9.5** Integration dans tous les templates (20 fichiers)
+  - Templates Jinja2 : index, courses, classement, profil, marche, cimetiere, abattoir, veterinaire, veterinaire_lobby, admin_pigs, mon_cochon
+  - Templates JS (race_circuit.html, race_live.html) : helper `pigVisualHTML()` avec fallback emoji
+  - SVG circuit : `<image>` SVG pour les marqueurs cochons avec avatar
+  - Victory overlay, podium, lobby pre-course, scoreboard, stat cards
+- [x] **9.6** Endpoints API enrichis avec `avatar_url`
+  - `GET /api/pig` — avatar_url du cochon du joueur
+  - `GET /api/race/<id>/replay` — avatar_url dans participant_meta
+  - `GET /api/race/<id>/pre-race` — avatar_url par participant
+- [x] **9.7** Stockage et persistance Docker
+  - Dossier `static/avatars/` avec `.gitkeep`
+  - Volume Docker `derby_avatars` monte sur `/app/static/avatars`
+
 ### Code optionnel (ameliorations futures)
 
 | # | Tache | Effort | Detail |

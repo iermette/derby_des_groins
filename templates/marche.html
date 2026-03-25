@@ -1,3 +1,4 @@
+{% from '_pig_avatar.html' import pig_display %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -206,7 +207,7 @@
                 {% set sale_locked = pig.is_injured %}
                 <div class="p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div class="flex items-center gap-4">
-                        <span class="text-4xl">{{ pig.emoji }}</span>
+                        <span>{{ pig_display(pig, 'text-4xl', 56) }}</span>
                         <div>
                             <p class="text-white font-bold text-lg">{{ pig.name }}</p>
                             <p class="text-white/40 text-xs font-semibold">

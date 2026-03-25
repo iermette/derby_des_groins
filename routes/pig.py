@@ -3,7 +3,7 @@ from datetime import datetime
 import random
 
 from extensions import db
-from models import User, Pig
+from models import User, Pig, PigAvatar
 from data import (
     SCHOOL_COOLDOWN_MINUTES,
     PIG_EMOJIS, PIG_ORIGINS, STAT_LABELS, STAT_DESCRIPTIONS, RARITIES, BREEDING_COST,
@@ -80,12 +80,14 @@ def mon_cochon():
             'share_snacks_remaining': max(0, SNACK_SHARE_DAILY_LIMIT - (user.snack_shares_today or 0)),
         })
 
+    available_avatars = PigAvatar.query.order_by(PigAvatar.name).all()
     return render_template('mon_cochon.html',
         user=user, pigs_data=pigs_data, cereals=get_cereals_dict(), trainings=get_trainings_dict(),
         school_lessons=get_school_lessons_dict(), school_cooldown_minutes=SCHOOL_COOLDOWN_MINUTES,
         pig_emojis=PIG_EMOJIS, stat_labels=STAT_LABELS, stat_descriptions=STAT_DESCRIPTIONS,
         adoption_cost=adoption_cost, active_listing_count=active_listing_count,
-        feeding_multiplier=feeding_multiplier, max_slots=max_slots, breeding_cost=BREEDING_COST
+        feeding_multiplier=feeding_multiplier, max_slots=max_slots, breeding_cost=BREEDING_COST,
+        available_avatars=available_avatars,
     )
 
 
@@ -324,6 +326,27 @@ def rename_pig():
         pig.name = new_name
     if new_emoji and new_emoji in PIG_EMOJIS:
         pig.emoji = new_emoji
+    db.session.commit()
+    return redirect(url_for('pig.mon_cochon'))
+
+
+@pig_bp.route('/choose-avatar', methods=['POST'])
+def choose_avatar():
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    user = User.query.get(session['user_id'])
+    pig_id = request.form.get('pig_id', type=int)
+    pig = Pig.query.get(pig_id)
+    if not pig or pig.user_id != user.id or not pig.is_alive:
+        flash("Cochon introuvable !", "error")
+        return redirect(url_for('pig.mon_cochon'))
+    avatar_id = request.form.get('avatar_id', type=int)
+    if avatar_id:
+        avatar = PigAvatar.query.get(avatar_id)
+        if avatar:
+            pig.avatar_id = avatar.id
+    else:
+        pig.avatar_id = None
     db.session.commit()
     return redirect(url_for('pig.mon_cochon'))
 

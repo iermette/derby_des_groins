@@ -1,3 +1,4 @@
+{% from '_pig_avatar.html' import pig_display %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -149,7 +150,7 @@
         <div class="tombstone p-6 pt-8 text-center">
             <!-- Emoji fantôme du cochon -->
             <div class="ghost mb-3">
-                <span class="text-4xl opacity-60">{{ pig.emoji }}</span>
+                <span class="opacity-60">{{ pig_display(pig, 'text-4xl', 56) }}</span>
             </div>
 
             <!-- Nom -->

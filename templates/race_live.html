@@ -228,6 +228,15 @@
     let totalDistance = 0;
     let laneEls = new Map();
 
+    /* Returns HTML for a pig visual (avatar image or emoji fallback) */
+    function pigVisualHTML(pig, size = 24) {
+      const avatarUrl = pig.avatar_url || replay?.participant_meta?.[pig.id]?.avatar_url;
+      if (avatarUrl) {
+        return `<img src="${avatarUrl}" alt="${pig.name || ''}" width="${size}" height="${size}" style="image-rendering:pixelated;width:${size}px;height:${size}px;border-radius:4px;display:inline-block;vertical-align:middle;">`;
+      }
+      return `<span style="font-size:${Math.round(size * 0.8)}px;line-height:1;">${pig.emoji || '🐷'}</span>`;
+    }
+
     function profileLabel(value) {
       return {
         MONTEE: '⛰️ Parcours vallonné',
@@ -259,7 +268,7 @@
         <div class="runner runner-card absolute top-1/2 -translate-y-1/2 flex items-center gap-2">
           <div class="rounded-2xl border border-white/15 bg-slate-950/85 px-3 py-1.5 shadow-lg shadow-black/40">
             <div class="flex items-center gap-2">
-              <span class="pig-emoji">${pig.emoji || '🐷'}</span>
+              <span class="pig-emoji">${pigVisualHTML(pig, 22)}</span>
               <span class="text-xs font-black text-white truncate max-w-[80px]">${pig.name}</span>
             </div>
             <div class="flex gap-1 mt-1" style="min-width:70px">
@@ -290,7 +299,7 @@
       turnLabelNode.textContent = `Tour ${turn.turn} / ${turns.length}`;
       progressNode.style.width = `${completed}%`;
       headlineNode.textContent = leader ? `${leader.name} mène la danse` : 'Replay en cours';
-      subheadNode.textContent = leader ? `${leader.emoji || '🐷'} ${leader.name} parcourt ${leader.distance.toFixed(1)} m.` : 'Aucun participant.';
+      subheadNode.textContent = leader ? `${leader.name} parcourt ${leader.distance.toFixed(1)} m.` : 'Aucun participant.';
 
       lanesNode.innerHTML = '';
       laneEls = new Map();
@@ -316,7 +325,7 @@
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-1.5 text-xs font-black text-white">
                   <span class="text-white/45 w-4">#${index + 1}</span>
-                  <span>${meta.emoji || '🐷'}</span>
+                  ${meta.avatar_url ? `<img src="${meta.avatar_url}" width="16" height="16" style="image-rendering:pixelated;border-radius:2px;vertical-align:middle;">` : `<span>${meta.emoji || '🐷'}</span>`}
                   <span class="truncate max-w-[80px]">${pig.name}</span>
                   ${specInfo ? `<span class="spec-badge flex-shrink-0" style="background:${specInfo.color}22;color:${specInfo.color};border:1px solid ${specInfo.color}33">${specInfo.label}</span>` : ''}
                 </div>
@@ -535,7 +544,7 @@
         const specInfo = SPEC_TYPES[pig.spec];
         const specRow = document.createElement('div');
         specRow.className = 'flex items-center gap-2 mb-1';
-        specRow.innerHTML = `<span class="text-sm">${pig.emoji}</span><span class="spec-badge" style="background:${specInfo.color}22;color:${specInfo.color};border:1px solid ${specInfo.color}33">${specInfo.label}</span><span class="text-[9px] text-white/25">${pig.name}</span>`;
+        specRow.innerHTML = `${pigVisualHTML(pig, 16)}<span class="spec-badge" style="background:${specInfo.color}22;color:${specInfo.color};border:1px solid ${specInfo.color}33">${specInfo.label}</span><span class="text-[9px] text-white/25">${pig.name}</span>`;
         wrapper.appendChild(specRow);
 
         /* SVG curve with N draggable points */

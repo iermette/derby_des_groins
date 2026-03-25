@@ -1,3 +1,4 @@
+{% from '_pig_avatar.html' import pig_display %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -202,7 +203,7 @@
                         {{ pig.emoji }}
                     </div>
 
-                    <div class="pig-emoji-display text-8xl mb-6">{{ pig.emoji }}</div>
+                    <div class="pig-emoji-display text-8xl mb-6">{{ pig_display(pig, 'text-8xl', 96) }}</div>
                     
                     <div>
                         <div class="flex flex-wrap items-center justify-center gap-2 mb-3">
@@ -240,6 +241,27 @@
                             </div>
                             <button type="submit" class="w-full btn-primary py-2 mt-2">Enregistrer</button>
                         </form>
+                        {% if available_avatars %}
+                        <form method="POST" action="/choose-avatar" class="mt-4 p-4 rounded-2xl bg-white/5 border border-white/10">
+                            <input type="hidden" name="pig_id" value="{{ pig.id }}">
+                            <label class="text-xs font-bold text-white/40 block mb-2">Avatar pixel art</label>
+                            <div class="flex flex-wrap gap-2 justify-center">
+                                <div class="emoji-picker-btn {% if not pig.avatar_id %}selected{% endif %}"
+                                     onclick="selectAvatar(this, '', '{{ pig.id }}')" title="Emoji par defaut">
+                                    <span class="text-xl">{{ pig.emoji }}</span>
+                                </div>
+                                {% for av in available_avatars %}
+                                <div class="emoji-picker-btn {% if pig.avatar_id == av.id %}selected{% endif %}"
+                                     onclick="selectAvatar(this, '{{ av.id }}', '{{ pig.id }}')" title="{{ av.name }}">
+                                    <img src="/static/avatars/{{ av.filename }}" width="32" height="32"
+                                         style="image-rendering: pixelated;" alt="{{ av.name }}">
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <input type="hidden" name="avatar_id" id="avatar-input-{{ pig.id }}" value="{{ pig.avatar_id or '' }}">
+                            <button type="submit" class="w-full btn-primary py-2 mt-2">Choisir cet avatar</button>
+                        </form>
+                        {% endif %}
                     </details>
 
                     <!-- Core Stats -->
@@ -724,9 +746,15 @@
     }
 
     function selectEmoji(btn, emoji, pigId) {
-        document.querySelectorAll('.emoji-picker-btn').forEach(b => b.classList.remove('selected'));
+        btn.closest('.flex').querySelectorAll('.emoji-picker-btn').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
         document.getElementById('emoji-input-' + pigId).value = emoji;
+    }
+
+    function selectAvatar(btn, avatarId, pigId) {
+        btn.closest('.flex').querySelectorAll('.emoji-picker-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        document.getElementById('avatar-input-' + pigId).value = avatarId;
     }
 
     function startVetCountdowns() {

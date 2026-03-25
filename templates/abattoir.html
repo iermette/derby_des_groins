@@ -1,3 +1,4 @@
+{% from '_pig_avatar.html' import pig_display %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -163,7 +164,7 @@
 
             <h3 class="text-white font-bold text-lg">{{ pig.charcuterie_type or 'Charcuterie' }}</h3>
             <p class="text-red-400/70 text-sm font-bold">
-                Anciennement « {{ pig.name }} » {{ pig.emoji }}
+                Anciennement « {{ pig.name }} » {{ pig_display(pig, 'text-sm', 18) }}
             </p>
             <p class="text-white/30 text-xs font-semibold mt-1">
                 Éleveur : {{ pig.owner.username if pig.owner else '???' }}

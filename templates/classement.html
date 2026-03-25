@@ -1,3 +1,4 @@
+{% from '_pig_avatar.html' import pig_display %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -159,7 +160,7 @@
                                 <div>
                                     <p class="font-bold text-white text-sm">{{ r.user.username }}</p>
                                     {% if r.best_pig %}
-                                    <p class="text-white/25 text-[10px] font-semibold">{{ r.best_pig.emoji }} {{ r.best_pig.name }}</p>
+                                    <p class="text-white/25 text-[10px] font-semibold">{{ pig_display(r.best_pig, 'text-[10px]', 14) }} {{ r.best_pig.name }}</p>
                                     {% endif %}
                                 </div>
                             </div>
@@ -347,7 +348,7 @@
                         <td class="px-4 py-3 font-bold text-white text-sm">{{ r.user.username }}</td>
                         <td class="px-4 py-3 text-sm">
                             {% if r.best_pig %}
-                            <span class="text-white/70">{{ r.best_pig.emoji }} {{ r.best_pig.name }}</span>
+                            <span class="text-white/70">{{ pig_display(r.best_pig, 'text-sm', 18) }} {{ r.best_pig.name }}</span>
                             <span class="stat-pill text-green-300 ml-1">{{ r.best_pig.races_won or 0 }}W</span>
                             {% else %}<span class="text-white/15">--</span>{% endif %}
                         </td>

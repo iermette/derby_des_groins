@@ -1,3 +1,4 @@
+{% from '_pig_avatar.html' import pig_display %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -100,7 +101,7 @@
                     <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
                         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                             <div class="flex items-center gap-4">
-                                <span class="text-5xl">{{ pig.emoji }}</span>
+                                <span>{{ pig_display(pig, 'text-5xl', 64) }}</span>
                                 <div>
                                     <div class="flex items-center gap-2 flex-wrap">
                                         <p class="text-white font-bold text-lg">{{ pig.name }}</p>

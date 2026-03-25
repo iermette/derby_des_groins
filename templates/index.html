@@ -1,3 +1,4 @@
+{% from '_pig_avatar.html' import pig_display %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -194,7 +195,7 @@
             {% if featured_pig %}
             {% set pig = featured_pig.pig %}
             <div class="mt-5 flex items-start gap-4">
-                <div class="text-5xl">{{ pig.emoji }}</div>
+                <div>{{ pig_display(pig, 'text-5xl', 64) }}</div>
                 <div>
                     <h3 class="text-white text-2xl font-extrabold">{{ pig.name }}</h3>
                     <p class="text-white/45 text-sm font-semibold mt-1">Niveau {{ pig.level }} • {{ featured_pig.weight_profile.status_label }} • {{ "%.1f"|format(pig.weight_kg or 112) }} kg</p>

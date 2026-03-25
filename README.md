@@ -253,8 +253,8 @@ derby_des_groins/
 │   ├── abattoir.py         # abattoir, cimetière
 │   ├── blackjack.py        # Groin Jack — blackjack porcin
 │   ├── truffes.py          # Jeu des Truffes — grille 20x20
-│   ├── admin.py            # panneau admin complet (sidebar, 7 sections, SMTP, users)
-│   ├── api.py              # vétérinaire, countdown, pig API, live-state
+│   ├── admin.py            # panneau admin complet (sidebar, 8 sections, SMTP, users, avatars)
+│   ├── api.py              # vétérinaire, countdown, pig API, live-state, avatars
 │   └── health.py           # Health check /health
 │
 ├── helpers/                # Package helpers modulaire (8 modules)
@@ -276,7 +276,8 @@ derby_des_groins/
 │   ├── marketplace_service.py
 │   └── game_settings_service.py
 │
-├── templates/              # 32 templates Jinja2
+├── templates/              # 34 templates Jinja2
+│   ├── _pig_avatar.html    # Macro Jinja2 pig_display() (avatar pixel art ou emoji)
 │   ├── _site_header.html   # Header partagé / navigation principale
 │   ├── index.html          # Dashboard d'accueil
 │   ├── courses.html        # Calendrier des courses (groupé par jour)
@@ -286,10 +287,12 @@ derby_des_groins/
 │   ├── marche.html         # Marché aux Cochons — enchères
 │   ├── classement.html     # Classement (5 onglets)
 │   ├── history.html        # Historique (3 onglets)
-│   ├── admin_*.html        # Admin dashboard + 6 sous-pages
+│   ├── admin_avatars.html   # Gestion avatars pixel art (upload PNG/SVG/code SVG)
+│   ├── admin_*.html        # Admin dashboard + 7 sous-pages
 │   └── ...                 # + 20 autres pages
 │
 ├── static/                 # CSS, JS, images
+│   └── avatars/            # Avatars pixel art (PNG/SVG) — volume Docker persistant
 ├── instance/               # Base SQLite (dev local uniquement)
 └── tests/                  # Tests pytest
 ```
@@ -299,7 +302,7 @@ derby_des_groins/
 | Module | Rôle | Contenu |
 |--------|------|---------|
 | `extensions.py` | Objets partagés | `db = SQLAlchemy()`, `APP_TIMEZONE` |
-| `models.py` | Schéma de données | 19 modèles SQLAlchemy |
+| `models.py` | Schéma de données | 20 modèles SQLAlchemy (dont PigAvatar) |
 | `data.py` | Données statiques | Céréales, entraînements, école, raretés, origines, constantes |
 | `helpers/` | Logique métier | 8 modules : config, DB, temps, véto, courses, game data, marché |
 | `services/` | Couche métier | 7 modules : finance, cochon, courses, enchères, boutiques |
@@ -346,6 +349,7 @@ derby_des_groins/
 25. Le **Classement** propose 5 onglets (General, Abattoir, Paris, Elevage, Mur de la Honte) avec 18+ awards automatiques et des charts detailles
 26. La **Prime de pointage** de 15 🪙 est versee automatiquement a la premiere connexion de chaque journee pour garantir un revenu minimum
 27. L'**equilibrage v2** divise les gains de stats par 5 (anti-snowball), reduit la duree de vie des cochons de moitie et nerf la strategie Economie en course
+28. Les **avatars pixel art** permettent de remplacer l'emoji par un visuel personnalise (PNG 64x64 ou SVG) gere par l'admin dans `/admin/avatars`. Les joueurs choisissent leur avatar dans `/mon-cochon`
 
 ---
 

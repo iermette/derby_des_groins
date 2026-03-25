@@ -166,6 +166,9 @@
                 <a href="{{ url_for('admin.admin_data') }}" class="sidebar-link {{ 'active' if admin_tab == 'data' }}">
                     <span class="text-base w-6 text-center">🗃️</span> Donnees de jeu
                 </a>
+                <a href="{{ url_for('admin.admin_avatars') }}" class="sidebar-link {{ 'active' if admin_tab == 'avatars' }}">
+                    <span class="text-base w-6 text-center">🖼️</span> Avatars
+                </a>
 
                 <div class="sidebar-section">Utilisateurs</div>
                 <a href="{{ url_for('admin.admin_users') }}" class="sidebar-link {{ 'active' if admin_tab == 'users' }}">
@@ -204,6 +207,9 @@
             </a>
             <a href="{{ url_for('admin.admin_notifications') }}" class="flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-[10px] font-bold {{ 'text-indigo-400' if admin_tab == 'notifications' else 'text-white/40' }}">
                 <span class="text-lg">📧</span>SMTP
+            </a>
+            <a href="{{ url_for('admin.admin_avatars') }}" class="flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg text-[10px] font-bold {{ 'text-indigo-400' if admin_tab == 'avatars' else 'text-white/40' }}">
+                <span class="text-lg">🖼️</span>Avatars
             </a>
         </div>
     </div>

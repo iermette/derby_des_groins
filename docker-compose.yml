@@ -29,9 +29,12 @@ services:
       FLASK_DEBUG: "false"
       DERBY_TIMEZONE: ${DERBY_TIMEZONE:-Europe/Paris}
       DERBY_FORCE_SCHEDULER: "1"
+    volumes:
+      - derby_avatars:/app/static/avatars
     env_file:
       - path: .env
         required: false
 
 volumes:
   derby_pgdata:
+  derby_avatars:

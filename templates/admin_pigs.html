@@ -1,3 +1,4 @@
+{% from '_pig_avatar.html' import pig_display %}
 {% extends "admin_base.html" %}
 {% block title %}🐷 Cochons — Admin{% endblock %}
 
@@ -29,7 +30,7 @@
     <div class="user-row p-4 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between pig-item"
          data-alive="{{ pig.is_alive|int }}" data-injured="{{ pig.is_injured|int }}">
         <div class="flex items-start gap-3">
-            <span class="text-2xl">{{ pig.emoji }}</span>
+            <span>{{ pig_display(pig, 'text-2xl', 32) }}</span>
             <div>
                 <p class="text-white font-bold text-base">{{ pig.name }}</p>
                 <p class="text-white/40 text-xs font-semibold">

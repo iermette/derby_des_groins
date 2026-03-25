@@ -362,6 +362,14 @@ function initTrackSVG() {
 // ════════════════════════════════════════════════════════════════════
 //  PIG MARKERS
 // ════════════════════════════════════════════════════════════════════
+/* Returns HTML string for a pig visual (avatar image or emoji fallback) */
+function pigVisualHTML(pig, size = 24) {
+  if (pig.avatar_url) {
+    return `<img src="${pig.avatar_url}" alt="${pig.name || ''}" width="${size}" height="${size}" style="image-rendering:pixelated;width:${size}px;height:${size}px;border-radius:4px;display:inline-block;vertical-align:middle;">`;
+  }
+  return `<span style="font-size:${Math.round(size * 0.8)}px;line-height:1;">${pig.emoji || '🐷'}</span>`;
+}
+
 function createPigMarkers(pigsData) {
   const g = document.getElementById('pigs-g');
   g.innerHTML = '';
@@ -370,18 +378,29 @@ function createPigMarkers(pigsData) {
     group.setAttribute('class', 'pig-marker');
     group.setAttribute('id', `pig-${pig.id}`);
 
-    const emoji = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    emoji.setAttribute('font-size', '22');
-    emoji.setAttribute('text-anchor', 'middle');
-    emoji.setAttribute('dominant-baseline', 'central');
-    emoji.textContent = pig.emoji || '🐷';
+    if (pig.avatar_url) {
+      const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+      img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', pig.avatar_url);
+      img.setAttribute('width', '28');
+      img.setAttribute('height', '28');
+      img.setAttribute('x', '-14');
+      img.setAttribute('y', '-14');
+      img.setAttribute('style', 'image-rendering: pixelated;');
+      group.appendChild(img);
+    } else {
+      const emoji = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      emoji.setAttribute('font-size', '22');
+      emoji.setAttribute('text-anchor', 'middle');
+      emoji.setAttribute('dominant-baseline', 'central');
+      emoji.textContent = pig.emoji || '🐷';
+      group.appendChild(emoji);
+    }
 
     const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     label.setAttribute('class', 'pig-label');
     label.setAttribute('dy', '18');
     label.textContent = pig.name ? pig.name.substring(0, 10) : '';
 
-    group.appendChild(emoji);
     group.appendChild(label);
     g.appendChild(group);
 
@@ -434,7 +453,7 @@ function initStatsCards(pigsData) {
     card.id = `stat-${pig.id}`;
     card.innerHTML = `
       <div class="flex items-center gap-2 mb-1">
-        <span style="font-size:1.2rem;">${pig.emoji || '🐷'}</span>
+        ${pigVisualHTML(pig, 20)}
         <span class="text-xs font-bold truncate" style="color:${color};">${pig.name || '???'}</span>
         <span class="ml-auto text-[10px] text-white/30" id="stat-pos-${pig.id}">#—</span>
       </div>
@@ -579,7 +598,7 @@ async function showLobby(raceId, secondsToStart) {
     const pContainer = document.getElementById('lobby-participants');
     pContainer.innerHTML = (data.participants || []).map(p =>
       `<div class="flex items-center gap-2 px-3 py-2 rounded-lg border border-white/6 bg-white/3">
-        <span style="font-size:1.3rem;">${p.emoji}</span>
+        ${p.avatar_url ? `<img src="${p.avatar_url}" width="24" height="24" style="image-rendering:pixelated;border-radius:4px;">` : `<span style="font-size:1.3rem;">${p.emoji}</span>`}
         <div class="min-w-0">
           <div class="text-xs font-bold truncate">${p.name}</div>
           <div class="text-[10px] text-white/30">${p.owner_name || 'NPC'} · x${p.odds ? p.odds.toFixed(1) : '?'}</div>
@@ -692,7 +711,10 @@ function startAnimation(replay) {
   if (replay.participant_meta) {
     pigsData.forEach(pig => {
       const meta = replay.participant_meta[String(pig.id)];
-      if (meta) pig.emoji = meta.emoji || '🐷';
+      if (meta) {
+        pig.emoji = meta.emoji || '🐷';
+        pig.avatar_url = meta.avatar_url || null;
+      }
     });
   }
 
@@ -753,7 +775,12 @@ function finishAnimation() {
   const winner = sorted[0];
 
   const winnerMeta = replayData.participant_meta?.[String(winner.id)];
-  document.getElementById('victory-emoji').textContent = winnerMeta?.emoji || '🐷';
+  const victoryEmojiEl = document.getElementById('victory-emoji');
+  if (winnerMeta?.avatar_url) {
+    victoryEmojiEl.innerHTML = `<img src="${winnerMeta.avatar_url}" width="96" height="96" style="image-rendering:pixelated;border-radius:8px;">`;
+  } else {
+    victoryEmojiEl.textContent = winnerMeta?.emoji || '🐷';
+  }
   document.getElementById('victory-name').textContent = `${winner.name} GAGNE !`;
   document.getElementById('victory-details').textContent =
     `Course #${replayData.race_id || '?'} · ${replayData.finished_at || ''}`;
@@ -764,7 +791,7 @@ function finishAnimation() {
     const meta = replayData.participant_meta?.[String(p.id)];
     return `<div class="flex items-center gap-2 text-white/70">
       <span>${medals[i]}</span>
-      <span>${meta?.emoji || '🐷'}</span>
+      ${meta?.avatar_url ? `<img src="${meta.avatar_url}" width="20" height="20" style="image-rendering:pixelated;border-radius:3px;">` : `<span>${meta?.emoji || '🐷'}</span>`}
       <span class="font-bold">${p.name}</span>
     </div>`;
   }).join('');

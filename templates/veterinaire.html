@@ -1,3 +1,4 @@
+{% from '_pig_avatar.html' import pig_display %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -208,7 +209,7 @@
     <section class="card p-6 md:p-8 mb-8" style="background:linear-gradient(135deg,rgba(127,29,29,0.55),rgba(17,24,39,0.7));border-color:rgba(248,113,113,0.22);">
         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
             <div class="flex items-start gap-4">
-                <span class="text-5xl md:text-6xl heartbeat">{{ pig.emoji }}</span>
+                <span class="heartbeat">{{ pig_display(pig, 'text-5xl md:text-6xl', 72) }}</span>
                 <div>
                     <p class="text-red-300 font-bold uppercase tracking-[0.25em] text-xs mb-2">Urgence vétérinaire</p>
                     <h1 class="font-title text-3xl md:text-4xl text-white">{{ pig.name }}</h1>

@@ -8,7 +8,7 @@ import re
 import secrets
 
 from extensions import db
-from models import User, Race, Pig, Bet, CerealItem, TrainingItem, SchoolLessonItem
+from models import User, Race, Pig, Bet, CerealItem, TrainingItem, SchoolLessonItem, PigAvatar
 from data import JOURS_FR
 from helpers import (
     set_config, get_config, populate_race_participants, run_race_if_needed,
@@ -808,3 +808,153 @@ def admin_lesson_toggle(item_id):
     state = 'activee' if item.is_active else 'desactivee'
     flash(f"{item.emoji} {item.name} {state}.", "success")
     return redirect(url_for('admin.admin_data'))
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Avatars
+# ══════════════════════════════════════════════════════════════════════════════
+
+AVATAR_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'avatars')
+ALLOWED_AVATAR_EXT = {'png', 'svg'}
+MAX_AVATAR_SIZE = 256 * 1024  # 256 Ko
+
+
+@admin_bp.route('/admin/avatars')
+def admin_avatars():
+    user, redir = _require_admin()
+    if redir:
+        return redir
+    avatars = PigAvatar.query.order_by(PigAvatar.name).all()
+    return render_template('admin_avatars.html', admin_tab='avatars', avatars=avatars)
+
+
+@admin_bp.route('/admin/avatars/upload', methods=['POST'])
+def admin_avatar_upload():
+    user, redir = _require_admin()
+    if redir:
+        return redir
+
+    name = request.form.get('name', '').strip()
+    if not name:
+        flash("Nom d'avatar requis.", "error")
+        return redirect(url_for('admin.admin_avatars'))
+
+    svg_code = request.form.get('svg_code', '').strip()
+    file = request.files.get('avatar_file')
+
+    if svg_code:
+        if not svg_code.strip().startswith('<svg') and not svg_code.strip().startswith('<?xml'):
+            flash("Le code SVG doit commencer par <svg.", "error")
+            return redirect(url_for('admin.admin_avatars'))
+        avatar = PigAvatar(name=name, filename='_tmp', format='svg')
+        db.session.add(avatar)
+        db.session.flush()
+        filename = f'{avatar.id}.svg'
+        avatar.filename = filename
+        os.makedirs(AVATAR_DIR, exist_ok=True)
+        with open(os.path.join(AVATAR_DIR, filename), 'w', encoding='utf-8') as f:
+            f.write(svg_code)
+
+    elif file and file.filename:
+        ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+        if ext not in ALLOWED_AVATAR_EXT:
+            flash("Format autorise : PNG ou SVG.", "error")
+            return redirect(url_for('admin.admin_avatars'))
+        data = file.read()
+        if len(data) > MAX_AVATAR_SIZE:
+            flash("Fichier trop volumineux (max 256 Ko).", "error")
+            return redirect(url_for('admin.admin_avatars'))
+        if ext == 'png' and not data[:4] == b'\x89PNG':
+            flash("Fichier PNG invalide.", "error")
+            return redirect(url_for('admin.admin_avatars'))
+        avatar = PigAvatar(name=name, filename='_tmp', format=ext)
+        db.session.add(avatar)
+        db.session.flush()
+        filename = f'{avatar.id}.{ext}'
+        avatar.filename = filename
+        os.makedirs(AVATAR_DIR, exist_ok=True)
+        with open(os.path.join(AVATAR_DIR, filename), 'wb') as f:
+            f.write(data)
+    else:
+        flash("Fournir un fichier ou du code SVG.", "error")
+        return redirect(url_for('admin.admin_avatars'))
+
+    db.session.commit()
+    flash(f"Avatar '{name}' ajoute.", "success")
+    return redirect(url_for('admin.admin_avatars'))
+
+
+@admin_bp.route('/admin/avatars/<int:avatar_id>/edit', methods=['GET', 'POST'])
+def admin_avatar_edit(avatar_id):
+    user, redir = _require_admin()
+    if redir:
+        return redir
+    avatar = PigAvatar.query.get_or_404(avatar_id)
+
+    if request.method == 'GET':
+        svg_code = ''
+        if avatar.format == 'svg':
+            filepath = os.path.join(AVATAR_DIR, avatar.filename)
+            if os.path.exists(filepath):
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    svg_code = f.read()
+        return render_template('admin_avatar_edit.html', user=user, avatar=avatar, svg_code=svg_code)
+
+    # POST
+    name = request.form.get('name', '').strip()
+    if name:
+        avatar.name = name
+
+    svg_code = request.form.get('svg_code', '').strip()
+    file = request.files.get('avatar_file')
+
+    if svg_code:
+        if not svg_code.strip().startswith('<svg') and not svg_code.strip().startswith('<?xml'):
+            flash("Le code SVG doit commencer par <svg.", "error")
+            return redirect(url_for('admin.admin_avatar_edit', avatar_id=avatar.id))
+        # Remove old file if format changed
+        old_filepath = os.path.join(AVATAR_DIR, avatar.filename)
+        if os.path.exists(old_filepath):
+            os.remove(old_filepath)
+        avatar.format = 'svg'
+        avatar.filename = f'{avatar.id}.svg'
+        os.makedirs(AVATAR_DIR, exist_ok=True)
+        with open(os.path.join(AVATAR_DIR, avatar.filename), 'w', encoding='utf-8') as f:
+            f.write(svg_code)
+    elif file and file.filename:
+        ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+        if ext not in ALLOWED_AVATAR_EXT:
+            flash("Format autorise : PNG ou SVG.", "error")
+            return redirect(url_for('admin.admin_avatar_edit', avatar_id=avatar.id))
+        data = file.read()
+        if len(data) > MAX_AVATAR_SIZE:
+            flash("Fichier trop volumineux (max 256 Ko).", "error")
+            return redirect(url_for('admin.admin_avatar_edit', avatar_id=avatar.id))
+        old_filepath = os.path.join(AVATAR_DIR, avatar.filename)
+        if os.path.exists(old_filepath):
+            os.remove(old_filepath)
+        avatar.format = ext
+        avatar.filename = f'{avatar.id}.{ext}'
+        os.makedirs(AVATAR_DIR, exist_ok=True)
+        with open(os.path.join(AVATAR_DIR, avatar.filename), 'wb') as f:
+            f.write(data)
+
+    db.session.commit()
+    flash(f"Avatar '{avatar.name}' mis a jour.", "success")
+    return redirect(url_for('admin.admin_avatars'))
+
+
+@admin_bp.route('/admin/avatars/<int:avatar_id>/delete', methods=['POST'])
+def admin_avatar_delete(avatar_id):
+    user, redir = _require_admin()
+    if redir:
+        return redir
+    avatar = PigAvatar.query.get_or_404(avatar_id)
+    Pig.query.filter_by(avatar_id=avatar.id).update({'avatar_id': None})
+    filepath = os.path.join(AVATAR_DIR, avatar.filename)
+    if os.path.exists(filepath):
+        os.remove(filepath)
+    db.session.delete(avatar)
+    db.session.commit()
+    flash(f"Avatar '{avatar.name}' supprime.", "success")
+    return redirect(url_for('admin.admin_avatars'))

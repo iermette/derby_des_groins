@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 from extensions import db
 from models import (
     GameConfig, User, Pig, BalanceTransaction, GrainMarket, Trophy,
-    CerealItem, TrainingItem, SchoolLessonItem,
+    CerealItem, TrainingItem, SchoolLessonItem, PigAvatar,
 )
 from data import PIG_ORIGINS, CEREALS, TRAININGS, SCHOOL_LESSONS
 from helpers import init_default_config, ensure_next_race, get_first_injured_pig
@@ -166,6 +166,7 @@ def migrate_db():
         ('trophy', 'trophy_key', 'VARCHAR(50)'),
         ('trophy', 'date_earned', 'DATETIME'),
         ('race', 'preview_segments_json', 'TEXT'),
+        ('pig', 'avatar_id', 'INTEGER'),
     ]
     table_migrations = [
         'ALTER TABLE game_config ALTER COLUMN value TYPE TEXT',

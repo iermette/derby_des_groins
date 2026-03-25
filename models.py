@@ -104,6 +104,8 @@ class Pig(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     name = db.Column(db.String(80), nullable=False, default='Mon Cochon')
     emoji = db.Column(db.String(10), default='🐷')
+    avatar_id = db.Column(db.Integer, db.ForeignKey('pig_avatar.id'), nullable=True)
+    avatar = db.relationship('PigAvatar', lazy='joined')
 
     # Compétences (0-100)
     vitesse = db.Column(db.Float, default=10.0)
@@ -168,6 +170,12 @@ class Pig(db.Model):
     owner = db.relationship('User', backref=db.backref('pigs', lazy=True))
 
     # ── Propriétés calculées ────────────────────────────────────────────
+
+    @property
+    def avatar_url(self):
+        if self.avatar and self.avatar.filename:
+            return f'/static/avatars/{self.avatar.filename}'
+        return None
 
     @property
     def races_remaining(self) -> int:
@@ -878,3 +886,11 @@ class MarketplaceListing(db.Model):
 
     seller = db.relationship('User', backref=db.backref('market_listings', lazy=True))
     inventory_item = db.relationship('InventoryItem')
+
+
+class PigAvatar(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(80), nullable=False)
+    filename = db.Column(db.String(100), nullable=False, unique=True)
+    format = db.Column(db.String(10), nullable=False, default='png')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
