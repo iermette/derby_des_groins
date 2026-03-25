@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 from datetime import datetime
 import json as _json
 
-from extensions import db
+from extensions import db, limiter
 from models import User, Pig, Race, Participant, Bet
 from data import SCHOOL_COOLDOWN_MINUTES, MIN_INJURY_RISK, DEFAULT_PIG_WEIGHT_KG
 from helpers import (
@@ -66,6 +66,7 @@ def veterinaire_index():
 
 
 @api_bp.route('/api/vet/solve', methods=['POST'])
+@limiter.limit("10 per minute")
 def vet_solve():
     if 'user_id' not in session:
         return jsonify({'error': 'Non connecté'}), 401
@@ -93,6 +94,7 @@ def vet_solve():
 
 
 @api_bp.route('/api/vet/timeout', methods=['POST'])
+@limiter.limit("10 per minute")
 def vet_timeout():
     if 'user_id' not in session:
         return jsonify({'error': 'Non connecté'}), 401
@@ -109,6 +111,7 @@ def vet_timeout():
 
 
 @api_bp.route('/api/countdown')
+@limiter.limit("30 per minute")
 def api_countdown():
     next_race = Race.query.filter_by(status='open').order_by(Race.scheduled_at).first()
     if not next_race:
@@ -119,6 +122,7 @@ def api_countdown():
 
 
 @api_bp.route('/api/latest_result')
+@limiter.limit("30 per minute")
 def api_latest_result():
     race = Race.query.filter_by(status='finished').order_by(Race.finished_at.desc()).first()
     if not race:
@@ -138,6 +142,7 @@ def api_latest_result():
 
 
 @api_bp.route('/api/pig')
+@limiter.limit("30 per minute")
 def api_pig():
     if 'user_id' not in session:
         return jsonify({'error': 'Non connecté'}), 401
@@ -169,11 +174,13 @@ def api_pig():
 
 
 @api_bp.route('/api/prix-groin')
+@limiter.limit("30 per minute")
 def api_prix_groin():
     return jsonify({'prix': get_prix_moyen_groin()})
 
 
 @api_bp.route('/api/race/<int:race_id>/replay')
+@limiter.limit("30 per minute")
 def api_race_replay(race_id):
     """Retourne le replay JSON d'une course terminée pour l'animation."""
     race = Race.query.get(race_id)
@@ -217,6 +224,7 @@ def api_race_replay(race_id):
 
 
 @api_bp.route('/api/race/latest/replay')
+@limiter.limit("30 per minute")
 def api_latest_race_replay():
     """Retourne le replay de la derniere course terminee."""
     race = Race.query.filter_by(status='finished').order_by(Race.finished_at.desc()).first()
@@ -226,6 +234,7 @@ def api_latest_race_replay():
 
 
 @api_bp.route('/api/race/live-state')
+@limiter.limit("60 per minute")
 def api_race_live_state():
     """Central synchronization endpoint for the circuit overlay.
 
@@ -270,6 +279,7 @@ def api_race_live_state():
 
 
 @api_bp.route('/api/race/<int:race_id>/pre-race')
+@limiter.limit("30 per minute")
 def api_race_pre_race(race_id):
     """Returns participant lineup + circuit segments for the pre-race overlay."""
     race = Race.query.get(race_id)
@@ -316,6 +326,7 @@ def api_race_pre_race(race_id):
 
 
 @api_bp.route('/api/race/<int:race_id>/bets-spectator')
+@limiter.limit("30 per minute")
 def api_race_bets_spectator(race_id):
     """Returns all bets placed on a race for spectator view (anonymized amounts)."""
     race = Race.query.get(race_id)

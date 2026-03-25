@@ -2,7 +2,7 @@ from datetime import date, datetime
 
 from flask import Blueprint, jsonify, redirect, render_template, request, session, url_for
 
-from extensions import db
+from extensions import db, limiter
 from models import User
 from services.finance_service import credit_user_balance
 
@@ -40,6 +40,7 @@ def truffes():
 
 
 @truffes_bp.route('/truffes/play', methods=['POST'])
+@limiter.limit("10 per minute")
 def truffes_play():
     """Called when the user starts a game (first click). Marks the day as used."""
     user_id = session.get('user_id')
@@ -59,6 +60,7 @@ def truffes_play():
 
 
 @truffes_bp.route('/truffes/win', methods=['POST'])
+@limiter.limit("10 per minute")
 def truffes_win():
     user_id = session.get('user_id')
     if not user_id:

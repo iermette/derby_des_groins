@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, redirect, url_for, session, request, flash
+from extensions import limiter
 from models import User, Shop, Item, InventoryItem, MarketplaceListing
 from services.galerie_service import get_all_shops, get_shop_by_slug, get_items_for_shop, get_item, buy_from_shop, init_shops
 from services.marketplace_service import get_all_listings, create_listing, buy_from_marketplace
@@ -29,6 +30,7 @@ def shop_detail(slug):
     return render_template('shop_detail.html', user=user, shop=shop, items=items, active_page='galerie')
 
 @galerie_bp.route('/galerie-lard-chande/<slug>/buy/<int:item_id>', methods=['POST'])
+@limiter.limit("10 per minute")
 def buy_item(slug, item_id):
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -62,6 +64,7 @@ def le_bon_groin():
     return render_template('le_bon_groin.html', user=user, listings=listings, inventory_items=inventory_items, active_page='galerie')
 
 @galerie_bp.route('/le-bon-groin/sell', methods=['POST'])
+@limiter.limit("5 per minute")
 def sell_marketplace():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -79,6 +82,7 @@ def sell_marketplace():
     return redirect(url_for('galerie.le_bon_groin'))
 
 @galerie_bp.route('/le-bon-groin/buy/<int:listing_id>', methods=['POST'])
+@limiter.limit("10 per minute")
 def buy_marketplace(listing_id):
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))

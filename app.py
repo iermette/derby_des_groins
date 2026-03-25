@@ -6,7 +6,12 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from extensions import db
+from flask_session import Session
+
+_server_session = Session()
+_session_interface = None
+
+from extensions import db, limiter
 from models import (
     GameConfig, User, Pig, BalanceTransaction, GrainMarket, Trophy,
     CerealItem, TrainingItem, SchoolLessonItem, PigAvatar,
@@ -41,6 +46,14 @@ def create_app():
         'DATABASE_URL', 'sqlite:///derby.db'
     )
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+    # ── Sessions serveur (Flask-Session + SQLAlchemy) ────────────────────
+    app.config['SESSION_TYPE'] = 'sqlalchemy'
+    app.config['SESSION_SQLALCHEMY'] = db
+    app.config['SESSION_PERMANENT'] = True
+    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
+    app.config['SESSION_KEY_PREFIX'] = 'derby:'
+    app.config['SESSION_SQLALCHEMY_TABLE'] = 'flask_sessions'
     db_url = app.config['SQLALCHEMY_DATABASE_URI']
     if 'sqlite' in db_url:
         app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'pool_pre_ping': True}
@@ -55,6 +68,13 @@ def create_app():
     app.config['SCHEDULER_ENABLED'] = os.environ.get('DERBY_DISABLE_SCHEDULER', '0') != '1'
 
     db.init_app(app)
+    limiter.init_app(app)
+    global _session_interface
+    if _session_interface is None:
+        _server_session.init_app(app)
+        _session_interface = app.session_interface
+    else:
+        app.session_interface = _session_interface
 
     @app.teardown_appcontext
     def shutdown_session(exception=None):
@@ -62,6 +82,14 @@ def create_app():
 
     for bp in all_blueprints:
         app.register_blueprint(bp)
+
+    # ── Rate limiting : page 429 personnalisee ───────────────────────────
+    from flask import jsonify as _jsonify, render_template as _rt
+    @app.errorhandler(429)
+    def ratelimit_handler(e):
+        if request.path.startswith('/api/'):
+            return _jsonify({'error': 'Trop de requetes, ralentis un peu !'}), 429
+        return _rt('429.html'), 429
 
     # ── Logging structure ───────────────────────────────────────────────
     @app.after_request

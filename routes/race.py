@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime
 
-from extensions import db
+from extensions import db, limiter
 from models import User, Race, Participant, Bet
 from data import BET_TYPES, WEEKLY_RACE_QUOTA, WEEKLY_BACON_TICKETS, MIN_BET_RACE, MAX_BET_RACE, COMPLEX_BET_MIN_SELECTIONS
 from helpers import ensure_next_race, get_user_active_pigs, apply_row_lock
@@ -66,6 +66,7 @@ def courses():
 
 
 @race_bp.route('/courses/plan', methods=['POST'])
+@limiter.limit("10 per minute")
 def plan_course():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -98,6 +99,7 @@ def plan_course():
 
 
 @race_bp.route('/bet', methods=['POST'])
+@limiter.limit("10 per minute")
 def place_bet():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))

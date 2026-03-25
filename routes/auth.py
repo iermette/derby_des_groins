@@ -6,7 +6,7 @@ import json
 import random
 import math
 
-from extensions import db
+from extensions import db, limiter
 from models import User, Pig, Bet, Auction, Trophy
 from data import PIG_ORIGINS, BET_TYPES, RARITIES
 from helpers import get_config, get_market_unlock_progress, get_market_lock_reason
@@ -17,6 +17,7 @@ auth_bp = Blueprint('auth', __name__)
 
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
+@limiter.limit("5 per minute", methods=["POST"])
 def register():
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
@@ -54,6 +55,7 @@ def register():
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
+@limiter.limit("5 per minute", methods=["POST"])
 def login():
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
@@ -114,6 +116,7 @@ def logout():
 
 
 @auth_bp.route('/profil', methods=['GET', 'POST'])
+@limiter.limit("5 per minute", methods=["POST"])
 def profil():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))

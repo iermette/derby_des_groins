@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 from sqlalchemy import update
 from datetime import datetime
 
-from extensions import db
+from extensions import db, limiter
 from models import User, Pig, Auction
 from data import RARITIES, PIG_ORIGINS, JOURS_FR, DEFAULT_PIG_WEIGHT_KG
 from helpers import (
@@ -50,6 +50,7 @@ def marche():
 
 
 @market_bp.route('/bid', methods=['POST'])
+@limiter.limit("10 per minute")
 def bid():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -123,6 +124,7 @@ def bid():
 
 
 @market_bp.route('/sell-pig', methods=['POST'])
+@limiter.limit("5 per minute")
 def sell_pig():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))

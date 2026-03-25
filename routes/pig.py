@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 from datetime import datetime
 import random
 
-from extensions import db
+from extensions import db, limiter
 from models import User, Pig, PigAvatar
 from data import (
     SCHOOL_COOLDOWN_MINUTES,
@@ -138,6 +138,7 @@ def adopt_second_pig():
 
 
 @pig_bp.route('/feed', methods=['POST'])
+@limiter.limit("15 per minute")
 def feed():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -177,6 +178,7 @@ def feed():
 
 
 @pig_bp.route('/share-snack', methods=['POST'])
+@limiter.limit("10 per minute")
 def share_snack():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -215,6 +217,7 @@ def share_snack():
 
 
 @pig_bp.route('/train', methods=['POST'])
+@limiter.limit("15 per minute")
 def train():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -250,6 +253,7 @@ def train():
 
 
 @pig_bp.route('/school', methods=['POST'])
+@limiter.limit("10 per minute")
 def school():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -305,6 +309,7 @@ def school():
 
 
 @pig_bp.route('/rename-pig', methods=['POST'])
+@limiter.limit("5 per minute")
 def rename_pig():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -331,6 +336,7 @@ def rename_pig():
 
 
 @pig_bp.route('/choose-avatar', methods=['POST'])
+@limiter.limit("10 per minute")
 def choose_avatar():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -352,6 +358,7 @@ def choose_avatar():
 
 
 @pig_bp.route('/challenge-mort', methods=['POST'])
+@limiter.limit("5 per minute")
 def challenge_mort():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -398,6 +405,7 @@ def challenge_mort():
 
 
 @pig_bp.route('/cancel-challenge', methods=['POST'])
+@limiter.limit("5 per minute")
 def cancel_challenge():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -427,6 +435,7 @@ def cancel_challenge():
     return redirect(url_for('pig.mon_cochon'))
 
 @pig_bp.route('/breed-pig', methods=['POST'])
+@limiter.limit("5 per minute")
 def breed_pig():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -469,6 +478,7 @@ def breed_pig():
     return redirect(url_for('pig.mon_cochon'))
 
 @pig_bp.route('/retire-pig-heritage', methods=['POST'])
+@limiter.limit("5 per minute")
 def retire_pig_heritage():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -486,6 +496,7 @@ def retire_pig_heritage():
 
 
 @pig_bp.route('/sacrifice-pig', methods=['POST'])
+@limiter.limit("5 per minute")
 def sacrifice_pig():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -527,6 +538,7 @@ def typing_challenge(pig_id):
 
 
 @pig_bp.route('/typing-complete', methods=['POST'])
+@limiter.limit("10 per minute")
 def typing_complete():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))

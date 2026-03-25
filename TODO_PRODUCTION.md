@@ -73,13 +73,25 @@
 
 ## TACHES RESTANTES
 
-### Infrastructure / Environnement (non-code)
+### Infrastructure / Environnement — Toutes terminees
 
-| # | Tache | Effort | Detail |
-|---|-------|--------|--------|
-| 1 | **1.7** SMTP credentials en env vars | 10 min | Migrer smtp_password de GameConfig vers env vars |
-| 2 | **2.7** Sessions server-side | 30 min | Flask-Session + Redis ou PostgreSQL |
-| 3 | **2.8** Rate limiting | 10 min | `flask-limiter` : login 5/min, paris 10/min, API 30/min |
+*(Plus aucune tache d'infra restante)*
+
+### Taches d'infra terminees
+
+- [x] **1.7** SMTP credentials : deja gere via le panneau admin `/admin/notifications` (GameConfig en base)
+- [x] **2.7** Sessions server-side : Flask-Session + SQLAlchemy/PostgreSQL (table `flask_sessions`, TTL 30 jours, prefixe `derby:`)
+- [x] **2.8** Rate limiting : `Flask-Limiter 4.1.1` (storage en memoire)
+  - Login/Register/Profil : 5 POST/min (anti brute-force)
+  - Paris/Planning/Encheres : 10/min
+  - Bourse move : 20/min, achats : 10/min
+  - Blackjack deal/new : 15/min, hit/stand/double : 30/min
+  - Actions cochon (feed/train) : 15/min, actions rares (breed/sacrifice) : 5/min
+  - API GET (countdown, pig, replay...) : 30/min, live-state : 60/min
+  - Galerie achats : 10/min, ventes : 5/min
+  - Truffes : 10/min
+  - Page 429 personnalisee (HTML + JSON pour les API)
+  - Admin non limite (pas besoin)
 
 ### Phase 6 — Caches supplementaires ✅
 - [x] **2.6b** Cache classement : cache memoire 5 min sur `_build_classement_data()`

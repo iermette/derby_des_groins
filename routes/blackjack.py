@@ -5,7 +5,7 @@ from typing import Any
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
-from extensions import db
+from extensions import db, limiter
 from models import User
 from services.finance_service import credit_user_balance, debit_user_balance
 
@@ -179,6 +179,7 @@ def blackjack():
 
 
 @blackjack_bp.route('/blackjack/deal', methods=['POST'])
+@limiter.limit("15 per minute")
 def blackjack_deal():
     user = _resolve_user()
     if not user:
@@ -271,6 +272,7 @@ def blackjack_deal():
 
 
 @blackjack_bp.route('/blackjack/hit', methods=['POST'])
+@limiter.limit("30 per minute")
 def blackjack_hit():
     user = _resolve_user()
     if not user:
@@ -300,6 +302,7 @@ def blackjack_hit():
 
 
 @blackjack_bp.route('/blackjack/stand', methods=['POST'])
+@limiter.limit("30 per minute")
 def blackjack_stand():
     user = _resolve_user()
     if not user:
@@ -315,6 +318,7 @@ def blackjack_stand():
 
 
 @blackjack_bp.route('/blackjack/double', methods=['POST'])
+@limiter.limit("30 per minute")
 def blackjack_double():
     user = _resolve_user()
     if not user:
@@ -353,6 +357,7 @@ def blackjack_double():
 
 
 @blackjack_bp.route('/blackjack/new', methods=['POST'])
+@limiter.limit("15 per minute")
 def blackjack_new():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))

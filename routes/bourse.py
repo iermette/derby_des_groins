@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, session, flash, request, jsonify
 from datetime import datetime, timedelta
 
-from extensions import db
+from extensions import db, limiter
 from models import User, Pig, BalanceTransaction
 from models import User, Pig, BalanceTransaction, MarketHistory
 from data import BOURSE_BLOCK_MIN, BOURSE_BLOCK_MAX, BOURSE_GRAIN_LAYOUT
@@ -75,6 +75,7 @@ def bourse():
 
 
 @bourse_bp.route('/bourse/move', methods=['POST'])
+@limiter.limit("20 per minute")
 def bourse_move():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
@@ -107,6 +108,7 @@ def bourse_move():
 
 
 @bourse_bp.route('/bourse/buy', methods=['POST'])
+@limiter.limit("10 per minute")
 def bourse_buy():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))

@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Preview__preview_start",
+      "Bash(netstat -ano)",
+      "Bash(findstr 5001.*LISTENING)",
+      "Bash(taskkill /F /PID 72528)",
+      "Bash(TASKKILL //F //PID 72528)",
+      "Bash(curl -s http://localhost:5001/circuit)",
+      "Bash(docker compose:*)",
+      "Bash(find /d/Programmation/derby_des_groins -name *.css -o -name *.js)"
+    ]
+  }
+}

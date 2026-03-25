@@ -226,7 +226,7 @@ Le projet suit une architecture **Flask Blueprints** modulaire, découpée par d
 
 ```
 derby_des_groins/
-├── app.py                  # Factory create_app(), migrations, seeds
+├── app.py                  # Factory create_app(), Flask-Session init, migrations, seeds
 ├── extensions.py           # SQLAlchemy db, timezone partagés
 ├── models.py               # 19 modèles SQLAlchemy (User, Pig, Race, Bet, GrainMarket…)
 ├── data.py                 # Constantes de jeu (céréales, entraînements, raretés…)
@@ -312,8 +312,9 @@ derby_des_groins/
 
 ## ⚙️ Stack technique
 
-- **Backend** : Flask + Flask-SQLAlchemy + Flask Blueprints
+- **Backend** : Flask + Flask-SQLAlchemy + Flask-Session + Flask Blueprints
 - **Base de données** : PostgreSQL (Docker) / SQLite (dev local)
+- **Sessions** : Flask-Session côté serveur (SQLAlchemy/PostgreSQL, table `flask_sessions`, TTL 30 jours)
 - **Serveur WSGI** : Gunicorn (1 worker, 4 threads)
 - **Conteneurisation** : Docker Compose (web + PostgreSQL 16)
 - **Scheduler** : APScheduler (résolution des courses, enchères, blessures)

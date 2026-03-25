@@ -2,7 +2,8 @@
 
 ## Technologies Utilisées
 - **Backend**: Python 3.x, Flask (Blueprint Based)
-- **Base de données**: SQLite avec SQLAlchemy via Flask-SQLAlchemy
+- **Base de données**: PostgreSQL (Docker) / SQLite (dev local) via Flask-SQLAlchemy
+- **Sessions**: Flask-Session côté serveur (SQLAlchemy/PostgreSQL, table `flask_sessions`, TTL 30 jours)
 - **Scheduler**: APScheduler pour les tâches de fond (simulations de courses, mise à jour des stats Tamagotchi, clôture des enchères, délais vétérinaires)
 - **Frontend**: HTML5, Jinja2, Tailwind CSS (CDN), Chart.js
 - **API Temps-RÉEL**: Endpoints JSON pour les countdowns, les flux de résultats et l'état détaillé des cochons.
@@ -50,7 +51,7 @@
 
 ```text
 derby_des_groins/
-├── app.py                  # Initialisation Flask et migrations légères
+├── app.py                  # Initialisation Flask, Flask-Session et migrations légères
 ├── models.py               # Définition de tous les modèles SQLAlchemy
 ├── extensions.py           # Instance db shared pour éviter les cycles
 ├── helpers.py              # Logique métier : calcul power, reproduction, PMU, transactions
