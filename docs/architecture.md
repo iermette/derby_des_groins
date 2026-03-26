@@ -69,6 +69,7 @@ derby_des_groins/
 │   ├── admin.py            # Panneau admin complet (7 sections, sidebar, SMTP, users)
 │   ├── blackjack.py        # Mini-jeu Groin Jack (blackjack porcin)
 │   ├── truffes.py          # Mini-jeu Jeu des Truffes (cherche-truffe)
+│   ├── agenda.py           # Mini-jeu La Légende du COMOP (réflexe calendrier)
 │   └── api.py              # Endpoints JSON pour l'UI dynamique + replay course
 ├── templates/              # Vues Jinja2 (v3.0 UI Responsive)
 │   ├── admin_base.html     # Layout admin partagé (sidebar + nav mobile)
@@ -96,6 +97,7 @@ derby_des_groins/
 - `/abattoir` : Hommage aux cochons disparus.
 - `/blackjack` : Mini-jeu Groin Jack — blackjack porcin avec mise en BitGroins.
 - `/truffes` : Mini-jeu Jeu des Truffes — cherche-truffe sur grille 20×20.
+- `/agenda` : Mini-jeu La Légende du COMOP — réflexe calendrier Porc-Look (50 🪙).
 - `/race/live` : Replay animé de la dernière course tour par tour.
 - `/auth/magic/<token>` : Connexion par lien magique (généré par l'admin, expire 24h).
 - `/admin/dashboard` : Vue d'ensemble admin (stats, économie, actions rapides).
@@ -108,6 +110,14 @@ derby_des_groins/
 
 ## Choix de Design
 L'esthétique repose sur un **"Premium Dark Mode"** avec des accents vibrants. L'UI utilise massivement Tailwind CSS pour la réactivité et Chart.js pour visualiser les statistiques de performance des cochons.
+
+### Contraintes templates obligatoires
+Chaque template de page complète (hors partials `_*.html`, pages d'erreur et layouts fullscreen type `race_circuit.html`) **doit** inclure :
+- `{% include '_site_header.html' %}` en haut du `<body>` (navigation principale)
+- `{% include '_footer.html' %}` juste avant `</body>` (footer partagé avec liens et copyright)
+- `{% include '_flash.html' %}` pour les messages flash si la page utilise des formulaires ou des actions
+
+Les pages exemptées de footer : `429.html` (erreur), `auth.html` (login/register), `admin_base.html` (layout admin séparé), `race_circuit.html` (plein écran SVG).
 
 ## Équilibrage v2
 - **Progression nerfée** : les gains de stats par entraînement et école ont été divisés par 5 (anti-snowball).
