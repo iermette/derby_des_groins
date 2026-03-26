@@ -29,6 +29,8 @@ services:
       FLASK_DEBUG: "false"
       DERBY_TIMEZONE: ${DERBY_TIMEZONE:-Europe/Paris}
       DERBY_FORCE_SCHEDULER: "1"
+      # Mettre à "true" seulement si le site est servi en HTTPS (reverse proxy avec SSL)
+      SECURE_COOKIES: ${SECURE_COOKIES:-false}
     volumes:
       - derby_avatars:/app/static/avatars
     env_file:

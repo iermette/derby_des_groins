@@ -36,7 +36,10 @@ def create_app():
     if not app.debug and app.config['SECRET_KEY'].startswith('dev-only'):
         logger.warning("SECRET_KEY non definie ! Utilisez une cle secrete en production.")
 
-    app.config['SESSION_COOKIE_SECURE'] = os.environ.get('FLASK_ENV') == 'production'
+    # SESSION_COOKIE_SECURE ne doit être True QUE si le site est servi en HTTPS.
+    # En HTTP (ex : localhost Docker), il doit être False sinon le navigateur
+    # refuse d'envoyer le cookie → session perdue après chaque redirect.
+    app.config['SESSION_COOKIE_SECURE'] = os.environ.get('SECURE_COOKIES', 'false').lower() == 'true'
     app.config['SESSION_COOKIE_HTTPONLY'] = True
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
     app.config['TEMPLATES_AUTO_RELOAD'] = os.environ.get('FLASK_ENV') != 'production'
