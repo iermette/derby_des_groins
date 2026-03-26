@@ -8,7 +8,7 @@ from helpers.config import get_config
 class GameSettings:
     race_hour: int
     race_minute: int
-    market_day: int
+    market_days_raw: str          # ex: "1,3,4" — jours du marché séparés par virgules
     market_hour: int
     market_minute: int
     market_duration: int
@@ -22,11 +22,11 @@ class GameSettings:
         default_times = [f"{h:02d}:00" for h in range(8, 23)] + [f"{h:02d}:30" for h in range(8, 22)]
         default_times.sort()
         default_schedule = {str(i): default_times for i in range(7)}
-        
+
         return cls(
             race_hour=_get_int_config('race_hour', 14),
             race_minute=_get_int_config('race_minute', 0),
-            market_day=_get_int_config('market_day', 4),
+            market_days_raw=get_config('market_day', '4') or '4',
             market_hour=_get_int_config('market_hour', 13),
             market_minute=_get_int_config('market_minute', 45),
             market_duration=_get_int_config('market_duration', 120),
@@ -34,6 +34,20 @@ class GameSettings:
             empty_race_mode=get_config('empty_race_mode', 'fill') or 'fill',
             race_schedule=get_config('race_schedule', json.dumps(default_schedule)),
         )
+
+    @property
+    def market_days(self):
+        """Liste triée des jours de marché (0=Lundi … 6=Dimanche)."""
+        try:
+            return sorted(int(d.strip()) for d in self.market_days_raw.split(',') if d.strip().isdigit() and 0 <= int(d.strip()) <= 6)
+        except (TypeError, ValueError):
+            return [4]
+
+    @property
+    def market_day(self):
+        """Rétro-compatibilité : retourne le premier jour de marché."""
+        days = self.market_days
+        return days[0] if days else 4
 
     @property
     def schedule_dict(self):

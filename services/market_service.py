@@ -29,20 +29,37 @@ def get_prix_moyen_groin():
 
 
 def get_next_market_time():
+    """Retourne le prochain créneau d'ouverture du marché."""
     settings = get_game_settings()
     now = datetime.now()
-    days_ahead = settings.market_day - now.weekday()
-    if days_ahead < 0 or (days_ahead == 0 and now.hour * 60 + now.minute >= settings.market_hour * 60 + settings.market_minute + settings.market_duration):
-        days_ahead += 7
+    market_days = settings.market_days
+    if not market_days:
+        return now + timedelta(days=7)
+
+    closing_minutes = settings.market_hour * 60 + settings.market_minute + settings.market_duration
+
+    for offset in range(8):  # 0..7 couvre la semaine + rebouclage
+        candidate_day = (now.weekday() + offset) % 7
+        if candidate_day not in market_days:
+            continue
+        candidate = now.replace(hour=settings.market_hour, minute=settings.market_minute, second=0, microsecond=0) + timedelta(days=offset)
+        # Si c'est aujourd'hui mais déjà fermé, passer
+        if offset == 0 and now.hour * 60 + now.minute >= closing_minutes:
+            continue
+        return candidate
+
+    # Fallback : prochain occurrence du premier jour configuré
+    days_ahead = (market_days[0] - now.weekday()) % 7 or 7
     return now.replace(hour=settings.market_hour, minute=settings.market_minute, second=0, microsecond=0) + timedelta(days=days_ahead)
 
 
 def is_market_open(user=None):
+    """Vérifie si le marché est ouvert maintenant."""
     if user and user.is_admin:
         return True
     settings = get_game_settings()
     now = datetime.now()
-    if now.weekday() != settings.market_day:
+    if now.weekday() not in settings.market_days:
         return False
     market_start = now.replace(hour=settings.market_hour, minute=settings.market_minute, second=0, microsecond=0)
     return market_start <= now <= market_start + timedelta(minutes=settings.market_duration)

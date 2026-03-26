@@ -34,7 +34,7 @@ def marche():
     settings = get_game_settings()
     market_open = is_market_open(user)
     next_market = get_next_market_time()
-    market_day_name = JOURS_FR[settings.market_day]
+    market_day_name = ', '.join(JOURS_FR[d] for d in settings.market_days) if settings.market_days else JOURS_FR[4]
     market_time = f"{settings.market_hour}h{settings.market_minute:02d}"
     prix_groin = get_prix_moyen_groin()
 

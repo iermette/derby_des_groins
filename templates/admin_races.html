@@ -1,9 +1,9 @@
 {% extends "admin_base.html" %}
-{% block title %}🏁 Courses — Admin{% endblock %}
+{% block title %}🏁 Courses & Marché — Admin{% endblock %}
 
 {% block content %}
-<h1 class="font-title text-3xl text-white mb-1">🏁 Gestion des Courses</h1>
-<p class="text-white/40 font-semibold text-sm mb-6">Planning hebdomadaire, marche, courses a venir.</p>
+<h1 class="font-title text-3xl text-white mb-1">🏁 Courses & 🏪 Marche</h1>
+<p class="text-white/40 font-semibold text-sm mb-6">Planning hebdomadaire des courses, jours d'ouverture du marche aux cochons, et gestion des courses a venir.</p>
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
     <!-- GRILLE HORAIRE -->
@@ -33,12 +33,19 @@
             <h2 class="font-title text-xl text-white mb-3 mt-6">🏪 Horaire du Marche</h2>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 <div class="sm:col-span-2">
-                    <label class="text-white/60 text-xs font-bold block mb-1">Jour</label>
-                    <select name="market_day" class="input-admin w-full">
+                    <label class="text-white/60 text-xs font-bold block mb-2">Jours d'ouverture</label>
+                    <div class="flex flex-wrap gap-2">
                         {% for i in range(7) %}
-                        <option value="{{ i }}" {% if config.market_day == i|string %}selected{% endif %}>{{ jours[i] }}</option>
+                        <label class="flex items-center gap-1.5 px-3 py-2 rounded-lg border cursor-pointer transition-all
+                            {% if i in config.market_days %}bg-emerald-500/15 border-emerald-400/30 text-emerald-200{% else %}bg-white/5 border-white/10 text-white/50{% endif %}">
+                            <input type="checkbox" name="market_days" value="{{ i }}"
+                                   {% if i in config.market_days %}checked{% endif %}
+                                   class="accent-emerald-400">
+                            <span class="text-xs font-bold">{{ jours[i] }}</span>
+                        </label>
                         {% endfor %}
-                    </select>
+                    </div>
+                    <p class="text-white/30 text-[10px] font-semibold mt-1">Coche plusieurs jours pour ouvrir le marche sur plusieurs jours de la semaine.</p>
                 </div>
                 <div>
                     <label class="text-white/60 text-xs font-bold block mb-1">Heure</label>

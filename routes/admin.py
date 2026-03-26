@@ -151,7 +151,7 @@ def admin_races():
         config={
             'race_hour': settings.race_hour,
             'race_minute': settings.race_minute,
-            'market_day': settings.market_day,
+            'market_days': settings.market_days,
             'market_hour': settings.market_hour,
             'market_minute': settings.market_minute,
             'market_duration': settings.market_duration,
@@ -170,13 +170,18 @@ def admin_save():
         return redir
 
     keys = [
-        'race_hour', 'race_minute', 'market_day', 'market_hour',
+        'race_hour', 'race_minute', 'market_hour',
         'market_minute', 'market_duration', 'min_real_participants', 'empty_race_mode'
     ]
     for key in keys:
         val = request.form.get(key)
         if val is not None:
             set_config(key, val)
+
+    # Jours du marché : checkboxes multi-valeurs → "1,3,4"
+    market_days = request.form.getlist('market_days')
+    if market_days:
+        set_config('market_day', ','.join(sorted(market_days, key=int)))
 
     schedule = {}
     for i in range(7):
