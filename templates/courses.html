@@ -104,6 +104,14 @@
             border: 1px solid rgba(244, 114, 182, 0.22);
             border-radius: 1.5rem;
         }
+        .tab-btn { transition: all 0.2s; }
+        .tab-btn.active {
+            background: rgba(244, 114, 182, 0.15);
+            border-color: rgba(244, 114, 182, 0.4);
+            color: #f9a8d4;
+        }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
     </style>
 </head>
 <body>
@@ -138,92 +146,16 @@
         </div>
     </section>
 
-    <section class="card p-5 lg:p-6 space-y-5">
-        <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-                <p class="text-xs uppercase tracking-[0.35em] text-pink-200/70 font-extrabold">Lecture express</p>
-                <h2 class="font-title text-3xl text-white mt-2">🐽 Grand calendrier des engagements</h2>
-                <p class="text-white/45 font-semibold mt-2 max-w-3xl">Repere d'un coup d'oeil les jours occupes : chaque icone de cochon signale une inscription deja posee sur le creneau.</p>
-            </div>
-            <div class="flex flex-wrap gap-2">
-                <span class="pill bg-white/8 text-white/70 border border-white/10">{{ month_slots | length }} creneaux affiches</span>
-                <span class="pill bg-pink-500/12 text-pink-200 border border-pink-400/20">{{ pigs_data | length }} cochon(s) suivis</span>
-            </div>
-        </div>
+    <div class="flex flex-wrap gap-2 mb-6">
+        <button class="tab-btn active card px-4 py-3 text-sm font-bold border border-white/10 cursor-pointer" data-tab="planifier">🎯 Planifier</button>
+        <button class="tab-btn card px-4 py-3 text-sm font-bold border border-white/10 cursor-pointer text-white/50" data-tab="calendrier">🐽 Calendrier</button>
+        <button class="tab-btn card px-4 py-3 text-sm font-bold border border-white/10 cursor-pointer text-white/50" data-tab="mois">🧾 Vue 30 jours</button>
+    </div>
 
-        {# ── Calendrier groupé par jour ── #}
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {% set current_date = {'val': ''} %}
-            {% for slot in month_slots %}
-            {% set is_new_day = (slot.date_key != current_date.val) %}
-            {% if is_new_day %}
-                {# Fermer la colonne precedente si ce n'est pas le premier jour #}
-                {% if current_date.val != '' %}
-                    </div></div>
-                {% endif %}
-                {% if current_date.update({'val': slot.date_key}) %}{% endif %}
-
-                {# Ouvrir une nouvelle colonne jour #}
-                <div class="soft-card overflow-hidden">
-                    {# En-tete du jour #}
-                    <div class="px-4 py-3 border-b border-white/8 flex items-center justify-between gap-3
-                        {% set wd = slot.slot.strftime('%w') | int %}
-                        {% if wd == 5 or wd == 0 or wd == 6 %}bg-emerald-500/8{% elif wd == 5 %}bg-red-500/8{% else %}bg-white/[0.04]{% endif %}">
-                        <div class="flex items-center gap-3">
-                            <span class="font-title text-2xl text-white">{{ slot.slot.strftime('%d') }}</span>
-                            <div>
-                                <p class="text-white font-extrabold text-sm leading-tight">{{ slot.date_label }}</p>
-                                <p class="text-white/40 text-[11px] font-semibold">{{ slot.theme.emoji }} {{ slot.theme.name }}</p>
-                            </div>
-                        </div>
-                        <span class="pill !px-2 !py-1 bg-white/8 text-white/50 border border-white/10 text-[11px]">
-                            {% set day_slots_count = month_slots | selectattr('date_key', 'equalto', slot.date_key) | list | length %}
-                            {{ day_slots_count }} creneau{{ 'x' if day_slots_count > 1 else '' }}
-                        </span>
-                    </div>
-                    {# Liste des creneaux #}
-                    <div class="divide-y divide-white/[0.06]">
-            {% endif %}
-
-            {# ── Creneau individuel ── #}
-            <div class="px-4 py-2.5 flex items-center gap-3 hover:bg-white/[0.03] transition-colors
-                {% if slot.is_next %}bg-yellow-400/[0.06]{% endif %}">
-                {# Heure #}
-                <span class="text-white/70 font-extrabold text-sm w-12 shrink-0">{{ slot.slot.strftime('%H:%M') }}</span>
-
-                {# Cochons inscrits ou placeholder #}
-                <div class="flex items-center gap-1.5 min-w-[4rem]">
-                    {% if slot.user_plans %}
-                        {% for plan in slot.user_plans %}
-                            {% if plan.pig %}
-                            <span class="inline-flex h-7 w-7 items-center justify-center rounded-full border border-pink-300/20 bg-pink-500/12 text-sm" title="{{ plan.pig.name }}">{{ pig_display(plan.pig, 'text-sm', 20) }}</span>
-                            {% endif %}
-                        {% endfor %}
-                    {% else %}
-                        <span class="text-white/20 text-xs">—</span>
-                    {% endif %}
-                </div>
-
-                {# Badges statut #}
-                <div class="flex flex-wrap gap-1.5 ml-auto">
-                    {% if slot.is_next %}
-                    <span class="pill !px-2 !py-0.5 bg-yellow-400/15 text-yellow-200 border border-yellow-400/20 text-[11px]">Prochaine</span>
-                    {% endif %}
-                    {% if slot.race %}
-                    <span class="pill !px-2 !py-0.5 bg-indigo-500/12 text-indigo-200 border border-indigo-400/20 text-[11px]">{{ slot.participants | length }} partants</span>
-                    {% else %}
-                    <span class="pill !px-2 !py-0.5 bg-white/8 text-white/40 border border-white/10 text-[11px]">Planifiable</span>
-                    {% endif %}
-                </div>
-            </div>
-
-            {% endfor %}
-            {# Fermer le dernier jour #}
-            {% if month_slots %}
-                </div></div>
-            {% endif %}
-        </div>
-    </section>
+    {# ══════════════════════════════════════════════ #}
+    {# ONGLET 1 : PLANIFIER (défaut)                 #}
+    {# ══════════════════════════════════════════════ #}
+    <div id="tab-planifier" class="tab-panel active space-y-8">
 
     <section class="space-y-4">
         <div>
@@ -454,6 +386,107 @@
         </div>
     </section>
 
+    </div>{# /tab-planifier #}
+
+    {# ══════════════════════════════════════════════ #}
+    {# ONGLET 2 : CALENDRIER                        #}
+    {# ══════════════════════════════════════════════ #}
+    <div id="tab-calendrier" class="tab-panel">
+
+    <section class="card p-5 lg:p-6 space-y-5">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+                <p class="text-xs uppercase tracking-[0.35em] text-pink-200/70 font-extrabold">Lecture express</p>
+                <h2 class="font-title text-3xl text-white mt-2">🐽 Grand calendrier des engagements</h2>
+                <p class="text-white/45 font-semibold mt-2 max-w-3xl">Repere d'un coup d'oeil les jours occupes : chaque icone de cochon signale une inscription deja posee sur le creneau.</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <span class="pill bg-white/8 text-white/70 border border-white/10">{{ month_slots | length }} creneaux affiches</span>
+                <span class="pill bg-pink-500/12 text-pink-200 border border-pink-400/20">{{ pigs_data | length }} cochon(s) suivis</span>
+            </div>
+        </div>
+
+        {# ── Calendrier groupé par jour ── #}
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {% set current_date = {'val': ''} %}
+            {% for slot in month_slots %}
+            {% set is_new_day = (slot.date_key != current_date.val) %}
+            {% if is_new_day %}
+                {# Fermer la colonne precedente si ce n'est pas le premier jour #}
+                {% if current_date.val != '' %}
+                    </div></div>
+                {% endif %}
+                {% if current_date.update({'val': slot.date_key}) %}{% endif %}
+
+                {# Ouvrir une nouvelle colonne jour #}
+                <div class="soft-card overflow-hidden">
+                    {# En-tete du jour #}
+                    <div class="px-4 py-3 border-b border-white/8 flex items-center justify-between gap-3
+                        {% set wd = slot.slot.strftime('%w') | int %}
+                        {% if wd == 5 or wd == 0 or wd == 6 %}bg-emerald-500/8{% elif wd == 5 %}bg-red-500/8{% else %}bg-white/[0.04]{% endif %}">
+                        <div class="flex items-center gap-3">
+                            <span class="font-title text-2xl text-white">{{ slot.slot.strftime('%d') }}</span>
+                            <div>
+                                <p class="text-white font-extrabold text-sm leading-tight">{{ slot.date_label }}</p>
+                                <p class="text-white/40 text-[11px] font-semibold">{{ slot.theme.emoji }} {{ slot.theme.name }}</p>
+                            </div>
+                        </div>
+                        <span class="pill !px-2 !py-1 bg-white/8 text-white/50 border border-white/10 text-[11px]">
+                            {% set day_slots_count = month_slots | selectattr('date_key', 'equalto', slot.date_key) | list | length %}
+                            {{ day_slots_count }} creneau{{ 'x' if day_slots_count > 1 else '' }}
+                        </span>
+                    </div>
+                    {# Liste des creneaux #}
+                    <div class="divide-y divide-white/[0.06]">
+            {% endif %}
+
+            {# ── Creneau individuel ── #}
+            <div class="px-4 py-2.5 flex items-center gap-3 hover:bg-white/[0.03] transition-colors
+                {% if slot.is_next %}bg-yellow-400/[0.06]{% endif %}">
+                {# Heure #}
+                <span class="text-white/70 font-extrabold text-sm w-12 shrink-0">{{ slot.slot.strftime('%H:%M') }}</span>
+
+                {# Cochons inscrits ou placeholder #}
+                <div class="flex items-center gap-1.5 min-w-[4rem]">
+                    {% if slot.user_plans %}
+                        {% for plan in slot.user_plans %}
+                            {% if plan.pig %}
+                            <span class="inline-flex h-7 w-7 items-center justify-center rounded-full border border-pink-300/20 bg-pink-500/12 text-sm" title="{{ plan.pig.name }}">{{ pig_display(plan.pig, 'text-sm', 20) }}</span>
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <span class="text-white/20 text-xs">—</span>
+                    {% endif %}
+                </div>
+
+                {# Badges statut #}
+                <div class="flex flex-wrap gap-1.5 ml-auto">
+                    {% if slot.is_next %}
+                    <span class="pill !px-2 !py-0.5 bg-yellow-400/15 text-yellow-200 border border-yellow-400/20 text-[11px]">Prochaine</span>
+                    {% endif %}
+                    {% if slot.race %}
+                    <span class="pill !px-2 !py-0.5 bg-indigo-500/12 text-indigo-200 border border-indigo-400/20 text-[11px]">{{ slot.participants | length }} partants</span>
+                    {% else %}
+                    <span class="pill !px-2 !py-0.5 bg-white/8 text-white/40 border border-white/10 text-[11px]">Planifiable</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% endfor %}
+            {# Fermer le dernier jour #}
+            {% if month_slots %}
+                </div></div>
+            {% endif %}
+        </div>
+    </section>
+
+    </div>{# /tab-calendrier #}
+
+    {# ══════════════════════════════════════════════ #}
+    {# ONGLET 3 : VUE 30 JOURS                      #}
+    {# ══════════════════════════════════════════════ #}
+    <div id="tab-mois" class="tab-panel">
+
     <section class="space-y-4">
         <div>
             <h2 class="font-title text-3xl text-white">🧾 Vue sur 30 jours</h2>
@@ -509,7 +542,22 @@
             </div>
         </div>
     </section>
+
+    </div>{# /tab-mois #}
+
 </main>
 {% include '_footer.html' %}
+
+<script>
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('active'); b.classList.add('text-white/50'); });
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        btn.classList.remove('text-white/50');
+        document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+});
+</script>
 </body>
 </html>
