@@ -69,6 +69,37 @@
   - Overlay iframe plein ecran (`position:fixed; inset:0; z-index:10000`)
   - Polling auto : ouverture overlay a T-50s, rechargement replay a la fin
 
+### Phase 10 — Design, Responsive & Cohérence visuelle ✅
+- [x] **10.1** Refonte complète du header (`_site_header.html`)
+  - Menu hamburger mobile avec backdrop overlay cliquable
+  - Balance compacte sur mobile, nav collapsible sous lg (1024px)
+  - Backdrop `#nav-backdrop` cliquable pour fermer le menu
+- [x] **10.2** Cohérence des breakpoints sur ~30 templates
+  - `max-w-7xl` → `max-w-6xl` uniformisé
+  - Grilles `xl:` ajout systématique de `md:` et `lg:` breakpoints
+  - Titres `h1` responsifs : `text-3xl md:text-4xl lg:text-5xl`
+- [x] **10.3** Standardisation `.card`, `.btn-primary`, `.form-input`
+  - Couleurs unifiées sur tous les templates (gradient rose → orange)
+  - Border/background glass effect cohérent (`rgba(255,255,255,0.055)`)
+- [x] **10.4** Partials réutilisables
+  - `_flash.html` : messages flash centralisés et intégrés dans tous les templates
+  - `_footer.html` : footer partagé créé et intégré
+- [x] **10.5** Migration Bootstrap → Tailwind dans `typing_game.html`
+  - `.word-display` : `clamp(2rem, 8vw, 3.5rem)` pour responsive
+  - `.input-box` : `clamp(1rem, 4vw, 1.5rem)`
+- [x] **10.6** Intégration avatars pig dans tous les templates manquants
+
+### Phase 11 — Bugfixes Docker & Sessions ✅
+- [x] **11.1** Fix bug connexion admin/admin sur nouveau PC Docker
+  - Cause racine : `SESSION_COOKIE_SECURE=True` (prod) + HTTP localhost = cookie refusé par le navigateur
+  - Fix : `SECURE_COOKIES` env var (défaut `false`), à mettre `true` seulement derrière HTTPS
+- [x] **11.2** Fix double initialisation `create_app()`
+  - Gunicorn passé de `"app:create_app()"` → `"app:app"` pour éviter 2 appels
+- [x] **11.3** `ensure_admin_user()` : transaction dédiée avant `seed_users()`
+  - Admin committé indépendamment, immune aux échecs du seed général
+- [x] **11.4** `docker-entrypoint.sh` : attente PostgreSQL conditionnelle
+  - Skip si SQLite, timeout 30s → 40s, affichage de l'erreur au 1er essai
+
 ---
 
 ## TACHES RESTANTES
@@ -194,3 +225,4 @@
 | Performance | `/classement` avec 50+ users : 6 queries au lieu de 400+ |
 | Redirect | Tester `/login?next=//evil.com` → doit rester sur le site |
 | Debug | Verifier que `FLASK_DEBUG` n'est pas active en prod |
+| Cookie sécurisé | Tester login en HTTP : doit fonctionner. En HTTPS avec `SECURE_COOKIES=true` : vérifier `Set-Cookie: Secure` |

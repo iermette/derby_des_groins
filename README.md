@@ -173,6 +173,8 @@ cp .env.example .env        # optionnel : personnaliser SECRET_KEY, etc.
 docker compose up -d
 ```
 
+> **Note** : Pour un déploiement derrière un reverse proxy HTTPS, ajouter `SECURE_COOKIES=true` dans le fichier `.env`. Par défaut (`false`), les sessions fonctionnent en HTTP pur (localhost).
+
 Le site est accessible sur `http://localhost:5001`. PostgreSQL et Gunicorn sont configures automatiquement.
 
 - `docker compose down` : arrete les services (les donnees persistent)
@@ -276,9 +278,12 @@ derby_des_groins/
 │   ├── marketplace_service.py
 │   └── game_settings_service.py
 │
-├── templates/              # 34 templates Jinja2
+├── templates/              # 38 templates Jinja2
 │   ├── _pig_avatar.html    # Macro Jinja2 pig_display() (avatar pixel art ou emoji)
+│   ├── _flash.html         # Partial flash messages (succès, erreurs, warnings)
+│   ├── _footer.html        # Footer partagé (liens, version)
 │   ├── _site_header.html   # Header partagé / navigation principale
+│   ├── 429.html            # Page d'erreur 429 (rate limit)
 │   ├── index.html          # Dashboard d'accueil
 │   ├── courses.html        # Calendrier des courses (groupé par jour)
 │   ├── race_circuit.html   # Circuit Live SVG 2D
