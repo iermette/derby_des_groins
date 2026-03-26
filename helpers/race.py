@@ -140,7 +140,13 @@ def run_race_if_needed():
             db.session.commit()
             continue
 
-        participants_by_id = {p.id: p for p in participants}
+        # Mapping par pig_id (vrais cochons) ET par participant.id (PNJ)
+        participants_by_id = {}
+        for p in participants:
+            if p.pig_id:
+                participants_by_id[p.pig_id] = p
+            else:
+                participants_by_id[p.id] = p
         pig_start_freshness = {}
         pig_comeback_bonus_flags = {}
 

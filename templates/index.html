@@ -236,7 +236,7 @@
                 <div class="mt-3 space-y-2">
                     {% for participant in latest_race_participants[:3] %}
                     <div class="rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2.5 flex items-center justify-between gap-3">
-                        <div><p class="text-white font-bold">{{ participant.finish_position }}. {{ participant.emoji }} {{ participant.name }}</p><p class="text-white/35 text-xs font-semibold mt-1">{{ participant.owner_name if participant.owner_name else 'Ordinateur' }}</p></div>
+                        <div><p class="text-white font-bold">{{ participant.finish_position or '?' }}. {{ participant.emoji }} {{ participant.name }}</p><p class="text-white/35 text-xs font-semibold mt-1">{{ participant.owner_name if participant.owner_name else 'Ordinateur' }}</p></div>
                         <span class="text-yellow-300 text-sm font-extrabold">x{{ "%.1f"|format(participant.odds or 0) }}</span>
                     </div>
                     {% endfor %}

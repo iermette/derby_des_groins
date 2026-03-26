@@ -137,7 +137,7 @@
                     {% set sorted_parts = race.participants | selectattr('finish_position') | sort(attribute='finish_position') %}
                     <div class="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
                         {% for p in sorted_parts %}
-                        <span class="text-white/30 text-xs">{{ p.finish_position }}. {{ p.emoji }} {{ p.name }}</span>
+                        <span class="text-white/30 text-xs">{{ p.finish_position or '?' }}. {{ p.emoji }} {{ p.name }}</span>
                         {% endfor %}
                     </div>
                 </div>
