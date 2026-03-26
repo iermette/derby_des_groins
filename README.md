@@ -193,6 +193,8 @@ python app.py
 
 Acces local : `http://127.0.0.1:5000`
 
+> **Warning `SECRET_KEY non definie`** : ce message est normal en dev local, l'app fonctionne avec une cle par defaut. Pour le supprimer, definir la variable d'environnement avant de lancer : `set SECRET_KEY=nimportequoi1234` (Windows) ou `export SECRET_KEY=nimportequoi1234` (Mac/Linux). En production, utilisez une vraie cle secrete.
+
 > Note compatibilite : sur Python recent (notamment 3.14), le projet a besoin d'une version recente de `SQLAlchemy`. Le `requirements.txt` du depot est pingle pour eviter l'erreur `SQLCoreOperations` vue sur certains postes.
 
 En usage local via `python app.py`, le scheduler demarre automatiquement. Si le projet est heberge via un import WSGI dedie, definir `DERBY_FORCE_SCHEDULER=1` sur le process qui doit piloter le monde de jeu.
