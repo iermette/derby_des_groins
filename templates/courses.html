@@ -263,91 +263,97 @@
                 </span>
             </div>
 
-            {# ── Panel d'inscription (caché par défaut) ── #}
+            {# ── Panel d'inscription (caché par défaut) — layout horizontal ── #}
             <div class="slot-detail" id="detail-{{ loop.index }}">
-                <div class="px-4 py-4 space-y-3 bg-white/[0.015]">
+                <div class="px-4 py-3 bg-white/[0.015]">
 
-                    {# Info thème compact #}
-                    <div class="flex flex-wrap items-center gap-2 text-sm">
-                        <span class="text-white font-bold">{{ slot.theme.name }}</span>
-                        <span class="text-white/30">·</span>
-                        <span class="text-white/50 font-semibold">🎯 {{ slot.theme.focus_label }}</span>
-                        {% if slot.theme.reward_multiplier > 1 %}
-                        <span class="pill !px-2 !py-0.5 bg-yellow-400/15 text-yellow-100 border border-yellow-400/20 text-[11px]">💰 gains x{{ slot.theme.reward_multiplier }}</span>
-                        {% endif %}
-                        {% if slot.race and slot.race.status == 'open' %}
-                        <a href="/#betting-board" class="pill !px-2 !py-0.5 bg-pink-500/15 text-pink-200 border border-pink-400/20 text-[11px] hover:bg-pink-500/25 transition-colors">💰 Parier</a>
-                        {% endif %}
-                        {% if slot.race %}
-                        <span class="pill !px-2 !py-0.5 bg-indigo-500/12 text-indigo-200 border border-indigo-400/20 text-[11px]">Course #{{ slot.race.id }}</span>
-                        {% endif %}
-                    </div>
+                    {# Layout horizontal : infos | inscription | partants #}
+                    <div class="flex flex-col lg:flex-row lg:items-start gap-4">
 
-                    {# Formulaires d'inscription #}
-                    <p class="text-white font-extrabold text-sm">📝 Inscrire mon cochon</p>
-                    <div class="space-y-2">
-                        {% for option in slot.pig_options %}
-                        {% set pig = option.pig %}
-                        <form method="POST" action="/courses/plan" class="flex items-center gap-3 flex-wrap rounded-xl px-3 py-2.5
-                            {% if option.is_actual_participant %}bg-emerald-500/8 border border-emerald-400/15
-                            {% elif option.is_planned %}bg-yellow-500/8 border border-yellow-400/15
-                            {% else %}bg-white/[0.03] border border-white/[0.06]{% endif %}">
-                            <input type="hidden" name="pig_id" value="{{ pig.id }}">
-                            <input type="hidden" name="scheduled_at" value="{{ slot.slot_key }}">
-                            <input type="hidden" name="strategy_phase_1" value="{{ option.current_strategy_profile.phase_1 }}">
-                            <input type="hidden" name="strategy_phase_2" value="{{ option.current_strategy_profile.phase_2 }}">
-                            <input type="hidden" name="strategy_phase_3" value="{{ option.current_strategy_profile.phase_3 }}">
-
-                            <span class="text-lg shrink-0">{{ pig_display(pig, 'text-lg', 22) }}</span>
-                            <div class="min-w-0">
-                                <p class="text-white font-bold text-sm truncate">{{ pig.name }}</p>
-                                <p class="text-white/40 text-[11px] font-semibold">
-                                    {% if option.is_actual_participant %}✅ Confirme partant
-                                    {% elif option.is_planned %}📌 Planifie — clic pour retirer
-                                    {% elif option.disabled_reason %}🚫 {{ option.disabled_reason }}
-                                    {% else %}{{ option.weekly_commitments }}/{{ weekly_quota }} semaine · {{ option.projected_remaining }} restante{{ 's' if option.projected_remaining > 1 else '' }}{% endif %}
-                                </p>
+                        {# Colonne 1 : Infos thème #}
+                        <div class="lg:w-48 shrink-0">
+                            <p class="text-white font-bold text-sm">{{ slot.theme.name }}</p>
+                            <p class="text-white/45 text-[11px] font-semibold mt-1">🎯 {{ slot.theme.focus_label }}</p>
+                            <div class="flex flex-wrap gap-1.5 mt-2">
+                                {% if slot.theme.reward_multiplier > 1 %}
+                                <span class="pill !px-2 !py-0.5 bg-yellow-400/15 text-yellow-100 border border-yellow-400/20 text-[10px]">💰 x{{ slot.theme.reward_multiplier }}</span>
+                                {% endif %}
+                                {% if slot.race %}
+                                <span class="pill !px-2 !py-0.5 bg-indigo-500/12 text-indigo-200 border border-indigo-400/20 text-[10px]">Course #{{ slot.race.id }}</span>
+                                {% endif %}
+                                {% if slot.race and slot.race.status == 'open' %}
+                                <a href="/#betting-board" class="pill !px-2 !py-0.5 bg-pink-500/15 text-pink-200 border border-pink-400/20 text-[10px] hover:bg-pink-500/25 transition-colors">💰 Parier</a>
+                                {% endif %}
                             </div>
+                        </div>
 
-                            <button type="submit" class="ml-auto pill !px-3 !py-1.5 text-[11px] font-extrabold shrink-0 transition-all
-                                {% if option.is_actual_participant %}bg-emerald-500/20 text-emerald-200 border border-emerald-400/30
-                                {% elif option.is_planned %}bg-yellow-500/20 text-yellow-200 border border-yellow-400/30 hover:bg-yellow-500/30
-                                {% elif not option.can_toggle %}bg-white/8 text-white/40 border border-white/10
-                                {% else %}bg-pink-500/20 text-pink-200 border border-pink-400/30 hover:bg-pink-500/30{% endif %}"
-                                {% if not option.can_toggle and not option.is_planned %}disabled{% endif %}>
-                                {% if option.is_actual_participant %}✅ Partant
-                                {% elif option.is_planned %}❌ Desinscrire
-                                {% elif not option.can_toggle %}🚫
-                                {% else %}➕ Inscrire mon cochon{% endif %}
-                            </button>
-                        </form>
-                        {% endfor %}
-                    </div>
+                        {# Colonne 2 : Inscription (principale) #}
+                        <div class="flex-1 min-w-0">
+                            <p class="text-white font-extrabold text-xs mb-2">📝 Inscrire mon cochon</p>
+                            <div class="space-y-1.5">
+                                {% for option in slot.pig_options %}
+                                {% set pig = option.pig %}
+                                <form method="POST" action="/courses/plan" class="flex items-center gap-2 rounded-lg px-2.5 py-2
+                                    {% if option.is_actual_participant %}bg-emerald-500/8 border border-emerald-400/15
+                                    {% elif option.is_planned %}bg-yellow-500/8 border border-yellow-400/15
+                                    {% else %}bg-white/[0.03] border border-white/[0.06]{% endif %}">
+                                    <input type="hidden" name="pig_id" value="{{ pig.id }}">
+                                    <input type="hidden" name="scheduled_at" value="{{ slot.slot_key }}">
+                                    <input type="hidden" name="strategy_phase_1" value="{{ option.current_strategy_profile.phase_1 }}">
+                                    <input type="hidden" name="strategy_phase_2" value="{{ option.current_strategy_profile.phase_2 }}">
+                                    <input type="hidden" name="strategy_phase_3" value="{{ option.current_strategy_profile.phase_3 }}">
 
-                    {# Participants (compact, inline) #}
-                    {% if slot.participants %}
-                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 pt-2 border-t border-white/[0.06]">
-                        <span class="text-white/40 text-xs font-bold shrink-0">Partants :</span>
-                        {% for p in slot.participants[:8] %}
-                        <span class="text-white/60 text-xs font-semibold inline-flex items-center gap-1">
-                            {% if p.avatar_url %}<img src="{{ p.avatar_url }}" width="14" height="14" class="inline" style="image-rendering:pixelated;image-rendering:crisp-edges;">{% else %}{{ p.emoji }}{% endif %}
-                            {{ p.name }}
-                            <span class="text-yellow-300/50">x{{ "%.1f"|format(p.odds or 0) }}</span>
-                        </span>
-                        {% endfor %}
-                        {% if slot.participants | length > 8 %}
-                        <span class="text-white/30 text-xs">+{{ slot.participants | length - 8 }} autres</span>
+                                    <span class="text-base shrink-0">{{ pig_display(pig, 'text-base', 18) }}</span>
+                                    <span class="text-white font-bold text-xs truncate">{{ pig.name }}</span>
+                                    <span class="text-white/35 text-[10px] font-semibold whitespace-nowrap hidden sm:inline">
+                                        {% if option.is_actual_participant %}✅ Partant
+                                        {% elif option.is_planned %}📌 Planifie
+                                        {% elif option.disabled_reason %}{{ option.disabled_reason }}
+                                        {% else %}{{ option.weekly_commitments }}/{{ weekly_quota }}{% endif %}
+                                    </span>
+
+                                    <button type="submit" class="ml-auto pill !px-2.5 !py-1 text-[10px] font-extrabold shrink-0 transition-all
+                                        {% if option.is_actual_participant %}bg-emerald-500/20 text-emerald-200 border border-emerald-400/30
+                                        {% elif option.is_planned %}bg-yellow-500/20 text-yellow-200 border border-yellow-400/30 hover:bg-yellow-500/30
+                                        {% elif not option.can_toggle %}bg-white/8 text-white/40 border border-white/10
+                                        {% else %}bg-pink-500/20 text-pink-200 border border-pink-400/30 hover:bg-pink-500/30{% endif %}"
+                                        {% if not option.can_toggle and not option.is_planned %}disabled{% endif %}>
+                                        {% if option.is_actual_participant %}✅ Partant
+                                        {% elif option.is_planned %}❌ Desinscrire
+                                        {% elif not option.can_toggle %}🚫
+                                        {% else %}➕ Inscrire{% endif %}
+                                    </button>
+                                </form>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        {# Colonne 3 : Partants #}
+                        {% if slot.participants %}
+                        <div class="lg:w-56 shrink-0">
+                            <p class="text-white/50 text-xs font-bold mb-2">{{ slot.participants | length }} partants</p>
+                            <div class="flex flex-wrap gap-1.5">
+                                {% for p in slot.participants[:8] %}
+                                <span class="inline-flex items-center gap-1 pill !px-2 !py-0.5 bg-white/[0.04] border border-white/[0.06] text-[10px] text-white/55">
+                                    {% if p.avatar_url %}<img src="{{ p.avatar_url }}" width="12" height="12" class="inline" style="image-rendering:pixelated">{% else %}{{ p.emoji }}{% endif %}
+                                    {{ p.name }}
+                                    <span class="text-yellow-300/40">x{{ "%.1f"|format(p.odds or 0) }}</span>
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% elif slot.user_plan_names %}
+                        <div class="lg:w-48 shrink-0">
+                            <p class="text-white/50 text-xs font-bold mb-2">Planifies</p>
+                            <div class="flex flex-wrap gap-1.5">
+                                {% for name in slot.user_plan_names %}
+                                <span class="pill !px-2 !py-0.5 bg-white/[0.04] border border-white/[0.06] text-[10px] text-white/50">📌 {{ name }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
                         {% endif %}
-                    </div>
-                    {% elif slot.user_plan_names %}
-                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 pt-2 border-t border-white/[0.06]">
-                        <span class="text-white/40 text-xs font-bold shrink-0">Planifies :</span>
-                        {% for name in slot.user_plan_names %}
-                        <span class="text-white/50 text-xs font-semibold">📌 {{ name }}</span>
-                        {% endfor %}
-                    </div>
-                    {% endif %}
 
+                    </div>
                 </div>
             </div>
 
