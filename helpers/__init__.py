@@ -45,6 +45,7 @@ from helpers.race import (
     refresh_race_betting_lines,
     get_user_active_pigs,
     ensure_next_race,
+    ensure_race_for_slot,
     run_race_if_needed,
     get_race_history_entries,
 )

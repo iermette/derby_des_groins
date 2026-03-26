@@ -103,6 +103,31 @@ def ensure_next_race():
     return race
 
 
+def ensure_race_for_slot(slot_time):
+    existing = Race.query.filter(
+        Race.scheduled_at == slot_time,
+        Race.status.in_(['upcoming', 'open']),
+    ).first()
+    if existing:
+        populate_race_participants(
+            existing, respect_course_plans=True,
+            allow_rebuild_if_bets=False, commit=True,
+        )
+        refresh_race_betting_lines(existing)
+        return existing
+
+    race = Race(scheduled_at=slot_time, status='open')
+    db.session.add(race)
+    db.session.flush()
+    segments = generate_course_segments()
+    race.preview_segments_json = json.dumps(segments)
+    populate_race_participants(
+        race, respect_course_plans=True,
+        allow_rebuild_if_bets=False, commit=True,
+    )
+    return race
+
+
 def run_race_if_needed():
     now = datetime.now()
     MAX_RACES_PER_TICK = 3
@@ -122,8 +147,10 @@ def run_race_if_needed():
         real_participants = [p for p in participants if p.owner_name]
         min_real = int(get_config('min_real_participants', '2'))
         mode = get_config('empty_race_mode', 'fill')
+        
+        has_bets = Bet.query.filter_by(race_id=race.id).count() > 0
 
-        if len(real_participants) < min_real and mode == 'cancel':
+        if len(real_participants) < min_real and mode == 'cancel' and not has_bets:
             race.status = 'cancelled'
             race.finished_at = now
             bets = Bet.query.filter_by(race_id=race.id, status='pending').all()

@@ -5,13 +5,14 @@ from datetime import datetime
 from extensions import db, limiter
 from models import User, Race, Participant, Bet
 from data import BET_TYPES, WEEKLY_RACE_QUOTA, WEEKLY_BACON_TICKETS, MIN_BET_RACE, MAX_BET_RACE, COMPLEX_BET_MIN_SELECTIONS
-from helpers import ensure_next_race, get_user_active_pigs, apply_row_lock
+from helpers import ensure_next_race, get_user_active_pigs, apply_row_lock, ensure_race_for_slot
 from services.pig_service import calculate_pig_power, get_weight_profile
 from services.race_service import (
     RacePlanningError, build_course_schedule, calculate_bet_odds,
     count_pig_weekly_course_commitments, format_bet_label,
     get_course_theme, get_user_weekly_bet_count, normalize_bet_type,
     parse_selection_ids, plan_pig_for_race, serialize_selection_ids,
+    get_upcoming_course_slots
 )
 
 race_bp = Blueprint('race', __name__)
@@ -86,10 +87,45 @@ def courses():
 @race_bp.route('/paris')
 def paris():
     """Page dédiée aux paris — cotes, formulaire de pari, historique."""
-    next_race = Race.query.filter(Race.status == 'open').order_by(Race.scheduled_at).first()
+    slot_str = request.args.get('slot')
+    race_id = request.args.get('race_id', type=int)
+    next_race = None
+
+    if race_id:
+        next_race = Race.query.filter_by(id=race_id, status='open').first()
+    elif slot_str:
+        try:
+            slot_dt = datetime.fromisoformat(slot_str)
+            next_race = ensure_race_for_slot(slot_dt)
+        except ValueError:
+            pass
+
     if not next_race:
         ensure_next_race()
         next_race = Race.query.filter(Race.status == 'open').order_by(Race.scheduled_at).first()
+
+    now = datetime.now()
+    all_slots = get_upcoming_course_slots(days=3)
+    future_slots = [s for s in all_slots if s > now]
+    if next_race:
+        future_slots = [s for s in future_slots if s != next_race.scheduled_at]
+    future_slots = future_slots[:8]
+
+    opened_races = Race.query.filter(
+        Race.scheduled_at.in_(future_slots),
+        Race.status == 'open'
+    ).all() if future_slots else []
+    
+    opened_races_by_slot = {r.scheduled_at: r for r in opened_races}
+    
+    upcoming_elements = []
+    for s in future_slots:
+        r = opened_races_by_slot.get(s)
+        upcoming_elements.append({
+            'slot': s,
+            'race': r,
+            'status': 'open' if r else 'upcoming'
+        })
 
     user = None
     user_bets = []
@@ -125,15 +161,6 @@ def paris():
             user_has_pig = any(p.pig_id and p.pig_id in user_pig_ids for p in participants)
             headline_status = {'participates': user_has_pig}
 
-    # Prochaines courses (pas encore ouvertes aux paris)
-    upcoming_races = (
-        Race.query
-        .filter(Race.status.in_(['upcoming', 'open']), Race.id != (next_race.id if next_race else -1))
-        .order_by(Race.scheduled_at)
-        .limit(8)
-        .all()
-    )
-
     return render_template(
         'paris.html',
         user=user,
@@ -142,7 +169,7 @@ def paris():
         participants=participants,
         user_bets=user_bets,
         recent_bets=recent_bets,
-        upcoming_races=upcoming_races,
+        upcoming_elements=upcoming_elements,
         bacon_tickets_remaining=bacon_tickets_remaining,
         weekly_bacon_tickets=WEEKLY_BACON_TICKETS,
         headline_status=headline_status,

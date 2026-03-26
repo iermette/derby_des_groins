@@ -271,29 +271,38 @@
     <section class="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <!-- Prochaines courses -->
         <article class="card p-6 lg:p-7">
-            <p class="text-white/40 text-xs uppercase tracking-[0.22em] font-extrabold">📅 A venir</p>
-            <h2 class="font-title text-2xl text-white mt-2">Prochaines courses</h2>
-            {% if upcoming_races %}
+            <p class="text-white/40 text-xs uppercase tracking-[0.22em] font-extrabold">📅 A venir sur le calendrier</p>
+            <h2 class="font-title text-2xl text-white mt-2">Ouvrir aux paris</h2>
+            <p class="text-white/40 text-[11px] font-semibold mt-1 mb-4 leading-tight">Même si aucun joueur de l'entreprise n'est inscrit sur ces créneaux, tu peux cliquer dessus pour ouvrir les paris et y lancer des cochons contrôlés par l'IA.</p>
+            {% if upcoming_elements %}
             <div class="mt-4 space-y-2">
-                {% for race in upcoming_races %}
-                <div class="soft px-4 py-3 flex items-center justify-between gap-3">
+                {% for elem in upcoming_elements %}
+                <a href="/paris?slot={{ elem.slot.isoformat() }}" class="soft px-4 py-3 flex items-center justify-between gap-3 hover:bg-white/10 transition-colors cursor-pointer border border-transparent">
                     <div class="min-w-0">
-                        <p class="text-white font-bold text-sm">#{{ race.id }} · {{ race.scheduled_at.strftime('%d/%m a %H:%M') }}</p>
-                        <p class="text-white/35 text-xs font-semibold">{{ race.participants|length }} partants · {{ race.bets|length }} paris</p>
+                        <p class="text-white font-bold text-sm">
+                            {% if elem.race %}#{{ elem.race.id }} · {% endif %}{{ elem.slot.strftime('%d/%m a %H:%M') }}
+                        </p>
+                        {% if elem.race %}
+                            <p class="text-white/35 text-xs font-semibold">{{ elem.race.participants|length }} partants · {{ elem.race.bets|length }} paris</p>
+                        {% else %}
+                            <p class="text-white/35 text-xs font-semibold">Créneau libre - IA en attente</p>
+                        {% endif %}
                     </div>
-                    {% if race.status == 'open' %}
-                    <span class="pill bg-emerald-500/12 text-emerald-200 border border-emerald-400/20 shrink-0 text-[10px]">Ouvert</span>
+                    {% if elem.status == 'open' %}
+                    <span class="pill bg-emerald-500/12 text-emerald-200 border border-emerald-400/20 shrink-0 text-[10px]">Déjà ouvert</span>
                     {% else %}
-                    <span class="pill bg-cyan-500/12 text-cyan-200 border border-cyan-400/20 shrink-0 text-[10px]">A venir</span>
+                    <span class="pill inline-flex bg-cyan-500/10 text-cyan-200 border border-cyan-400/20 shrink-0 text-[10px] items-center gap-1.5 hover:bg-cyan-500/20">
+                        Ouvrir course <span class="text-cyan-400 text-xs">🚀</span>
+                    </span>
                     {% endif %}
-                </div>
+                </a>
                 {% endfor %}
             </div>
             {% else %}
-            <div class="soft p-6 mt-4 text-center"><p class="text-white/30 font-semibold text-sm">Aucune autre course planifiee pour le moment.</p></div>
+            <div class="soft p-6 mt-4 text-center"><p class="text-white/30 font-semibold text-sm">Aucune autre course planifiee dans la grille admin.</p></div>
             {% endif %}
             <div class="mt-4">
-                <a href="/courses" class="btn-secondary text-sm w-full justify-center">📅 Voir le calendrier complet</a>
+                <a href="/courses" class="btn-secondary text-sm w-full justify-center">📅 Voir les inscriptions des autres joueurs</a>
             </div>
         </article>
 
