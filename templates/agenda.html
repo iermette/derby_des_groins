@@ -451,6 +451,8 @@
   const bossText       = document.getElementById('boss-text');
   const bossFace       = document.getElementById('boss-face');
   const balanceDisplay = document.getElementById('balance-display');
+  const remainingDisplay = document.getElementById('remaining-display');
+  const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
 
   /* ── State ── */
   let gameRunning = false;
@@ -468,6 +470,40 @@
   function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
   function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
   function getSlot(col, row) { return slots.find(s => s.col === col && s.row === row); }
+
+  async function postGameJson(url, payload = null) {
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+    const csrfToken = csrfTokenMeta ? csrfTokenMeta.getAttribute('content') : '';
+    if (csrfToken) headers['X-CSRFToken'] = csrfToken;
+
+    const options = {
+      method: 'POST',
+      headers
+    };
+    if (payload !== null) {
+      options.body = JSON.stringify(payload);
+    }
+
+    const response = await fetch(url, options);
+    let data = {};
+    try {
+      data = await response.json();
+    } catch (error) {
+      data = {
+        ok: false,
+        error: response.ok ? 'Réponse invalide du serveur' : 'Action refusée par le serveur'
+      };
+    }
+
+    if (!response.ok && typeof data.ok === 'undefined') {
+      data.ok = false;
+    }
+
+    return data;
+  }
 
   function positionFloatingElement(el, col, row) {
     const target = getSlot(col, row);
@@ -718,17 +754,15 @@
   /* ── Start ── */
   async function startGame() {
     try {
-      const resp = await fetch('/agenda/play', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      const data = await resp.json();
+      const data = await postGameJson('/agenda/play');
       if (!data.ok) {
         showOverlay('<p class="text-red-400 text-lg font-bold">' + (data.error || 'Erreur') + '</p>', false);
         return;
       }
       remainingPlays = data.remaining ?? (remainingPlays - 1);
-      document.getElementById('remaining-display').textContent = remainingPlays;
+      if (remainingDisplay) {
+        remainingDisplay.textContent = remainingPlays;
+      }
     } catch (err) {
       showOverlay('<p class="text-red-400 text-lg font-bold">Erreur de connexion</p>', false);
       return;
@@ -768,16 +802,15 @@
     showOverlay('<div style="animation: error-glitch 0.8s ease-in-out; font-family: monospace; color: #ef4444; font-size: 1.1rem;">Connexion au COMOP en cours...</div>', false);
 
     try {
-      const resp = await fetch('/agenda/win', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ catches: score })
-      });
-      const data = await resp.json();
+      const data = await postGameJson('/agenda/win', { catches: score });
 
       // Apr&egrave;s 1.5s, la r&eacute;v&eacute;lation
       setTimeout(() => {
-        if (data.ok) {
+        if (!data.ok) {
+          showOverlay('<p class="text-red-400 text-lg font-bold">' + (data.error || 'Le COMOP a englouti la récompense.') + '</p>', remainingPlays > 0);
+          return;
+        }
+        if (typeof data.new_balance === 'number') {
           balanceDisplay.innerHTML = data.new_balance.toFixed(2) + ' <span class="text-xs text-purple-300/40">BitGroins</span>';
         }
         showOverlay(`
