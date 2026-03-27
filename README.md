@@ -84,7 +84,7 @@ Chaque joueur possède un **cochon virtuel** qu'il doit développer comme un Tam
 - **Oser le Challenge de la Mort** — mise x3 si top 3, mais dernier = abattoir 🔪
 - **Jouer au Groin Jack** (`/blackjack`) — blackjack porcin avec mise en BitGroins, Jokers et double
 - **Chercher des Truffes** (`/truffes`) — mini-jeu gratuit sur grille 20×20, 7 clics pour gagner 20 🪙
-- **La Légende du COMOP** (`/agenda`) — mini-jeu réflexe : le Chef de Porc-jet t'invite au COMOP mais l'annule sans cesse. Attrape 5 COMOPs fantômes en 30s sur le calendrier Porc-Look pour gagner 50 🪙 et le titre "Ceinture Noire de Porc-Look"
+- **La Légende du GROSMOP** (`/agenda`) — mini-jeu réflexe : le Chef de Porc-jet t'invite au GROSMOP mais l'annule sans cesse. Attrape 5 GROSMOPs fantômes en 30s sur le calendrier Porc-Look pour gagner 50 🪙 et le titre "Ceinture Noire de Porc-Look"
 - **Regarder la Course en Direct** (`/race/live`) — replay animé tour par tour de la dernière course
 - **Faire du shopping** (`/galerie-lard-chande`) — acheter des équipements et cosmétiques dans les 5 boutiques de La Galerie Lard-chande avec vos Glands et Truffes
 - **Vendre et Acheter d'occasion** (`/le-bon-groin`) — marchander vos objets avec les autres joueurs sur Le Bon Groin
@@ -265,7 +265,7 @@ derby_des_groins/
 │   ├── abattoir.py         # abattoir, cimetière
 │   ├── blackjack.py        # Groin Jack — blackjack porcin
 │   ├── truffes.py          # Jeu des Truffes — grille 20x20
-│   ├── agenda.py           # La Légende du COMOP — mini-jeu réflexe calendrier
+│   ├── agenda.py           # La Légende du GROSMOP — mini-jeu réflexe calendrier
 │   ├── admin.py            # panneau admin complet (dashboard, economie, races, users, etc.)
 │   ├── api.py              # vétérinaire, countdown, pig API, live-state, avatars
 │   └── health.py           # Health check /health
@@ -370,7 +370,7 @@ derby_des_groins/
 27. L'**equilibrage v2** divise les gains de stats par 5 (anti-snowball), reduit la duree de vie des cochons de moitie et nerf la strategie Economie en course
 28. Les **avatars pixel art** permettent de remplacer l'emoji par un visuel personnalise (PNG 64x64 ou SVG) gere par l'admin dans `/admin/avatars`. Les joueurs choisissent leur avatar dans `/mon-cochon`
 29. Le panneau **`/admin/economy`** permet d'ajuster les rewards, les coûts, les tickets, les caps de payout, le house edge par type de pari et les multiplicateurs journaliers, avec une simulation basee sur les donnees live de la base
-30. **La Légende du COMOP** (`/agenda`) est un mini-jeu réflexe : le Chef de Porc-jet programme des COMOPs sur le calendrier Porc-Look mais les annule dès que ta souris s'approche. Attrape 5 COMOPs gelés en 30 secondes pour gagner 50 🪙. Piège : cliquer sur "VRAI TRAVAIL" fait perdre 2 secondes. Victoire = trophée "Ceinture Noire de Porc-Look"
+30. **La Légende du GROSMOP** (`/agenda`) est un mini-jeu réflexe : le Chef de Porc-jet programme des GROSMOPs sur le calendrier Porc-Look mais les annule dès que ta souris s'approche. Attrape 5 GROSMOPs gelés en 30 secondes pour gagner 50 🪙. Piège : cliquer sur "VRAI TRAVAIL" fait perdre 2 secondes. Victoire = trophée "Ceinture Noire de Porc-Look"
 
 ---
 

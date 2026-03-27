@@ -29,6 +29,13 @@ from services.economy_service import (
     save_economy_settings,
 )
 from services.game_settings_service import get_game_settings
+from services.progression_service import (
+    build_admin_progression_context,
+    build_progression_settings_from_form,
+    build_progression_simulation_inputs_from_form,
+    get_progression_settings,
+    save_progression_settings,
+)
 from services.race_service import get_configured_npcs
 
 admin_bp = Blueprint('admin', __name__)
@@ -188,6 +195,37 @@ def admin_economy(user):
         'admin_economy.html',
         user=user,
         admin_tab='economy',
+        **context,
+    )
+
+
+@admin_bp.route('/admin/progression', methods=['GET', 'POST'])
+@admin_required
+def admin_progression(user):
+    current_settings = get_progression_settings()
+    if request.method == 'POST':
+        settings = build_progression_settings_from_form(request.form, current_settings=current_settings)
+        preview_context = build_admin_progression_context(settings=settings)
+        simulation_inputs = build_progression_simulation_inputs_from_form(
+            request.form,
+            preview_context['snapshot'],
+            settings=settings,
+        )
+        if request.form.get('action') == 'save':
+            save_progression_settings(settings)
+            flash("Configuration de progression sauvegardee.", "success")
+            current_settings = settings
+        context = build_admin_progression_context(
+            settings=(current_settings if request.form.get('action') == 'save' else settings),
+            simulation_inputs=simulation_inputs,
+        )
+    else:
+        context = build_admin_progression_context(settings=current_settings)
+
+    return render_template(
+        'admin_progression.html',
+        user=user,
+        admin_tab='progression',
         **context,
     )
 

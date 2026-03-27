@@ -258,7 +258,7 @@
                     {% elif slot.is_locked %}bg-white/8 text-white/40 border border-white/10
                     {% else %}bg-pink-500/15 text-pink-200 border border-pink-400/30{% endif %}">
                     {% if has_my_pig %}✅ Inscrit ▾
-                    {% elif slot.is_locked %}🔒 Verrou
+                    {% elif slot.is_locked %}🔒 {{ slot.lock_reason or 'Verrou' }}
                     {% else %}➕ Inscrire ▾{% endif %}
                 </span>
             </div>
@@ -290,6 +290,12 @@
                         {# Colonne 2 : Inscription (principale) #}
                         <div class="flex-1 min-w-0">
                             <p class="text-white font-extrabold text-xs mb-2">📝 Inscrire mon cochon</p>
+                            {% if slot.is_locked %}
+                            <div class="mb-2 p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-[10px] text-amber-200/80 font-bold flex items-center gap-2">
+                                <span>⚠️</span>
+                                <span>La liste des partants est figée : des paris ont déjà été placés. Anticipez la prochaine fois !</span>
+                            </div>
+                            {% endif %}
                             <div class="space-y-1.5">
                                 {% for option in slot.pig_options %}
                                 {% set pig = option.pig %}
@@ -408,7 +414,7 @@
                             </td>
                             <td>
                                 {% if slot.is_locked %}
-                                <span class="pill bg-white/8 text-white/60 border border-white/10">Verrouillee</span>
+                                <span class="pill bg-white/8 text-white/60 border border-white/10">Verrouillee ({{ slot.lock_reason or 'Verrou' }})</span>
                                 {% elif slot.race %}
                                 <span class="pill bg-indigo-500/12 text-indigo-200 border border-indigo-400/20">Course ouverte</span>
                                 {% else %}

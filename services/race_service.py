@@ -529,7 +529,15 @@ def build_course_schedule(user, pigs, days=30):
         slot_user_plans = [plan for plan in slot_plan_rows if plan.user_id == user.id]
         slot_user_plan_by_pig = {plan.pig_id: plan for plan in slot_user_plans}
         slot_actual_pig_ids = {participant.pig_id for participant in slot_participants if participant.pig_id}
-        slot_locked = (slot_time - now).total_seconds() < 30 or (race is not None and bet_counts_by_race.get(race.id, 0) > 0)
+        seconds_to_start = (slot_time - now).total_seconds()
+        bet_count = bet_counts_by_race.get(race.id, 0) if race else 0
+        slot_locked = seconds_to_start < 30 or bet_count > 0
+
+        lock_reason = None
+        if seconds_to_start < 30:
+            lock_reason = "Départ imminent"
+        elif bet_count > 0:
+            lock_reason = "Paris déjà placés"
 
         week_key = get_week_window(slot_time)
         week_commitments = weekly_cache[week_key]
@@ -547,11 +555,11 @@ def build_course_schedule(user, pigs, days=30):
             quota_reached = weekly_commitments_pig >= weekly_quota and not (is_actual_participant or is_planned)
             can_toggle, disabled_reason = True, None
             if slot_locked:
-                can_toggle, disabled_reason = False, 'Course verrouillee'
+                can_toggle, disabled_reason = False, lock_reason
             elif race and race.status == 'open' and (pig.is_injured or pig.energy <= 20 or pig.hunger <= 20):
                 can_toggle, disabled_reason = False, 'Trop faible pour la course ouverte'
             elif quota_reached:
                 can_toggle, disabled_reason = False, 'Quota hebdo atteint'
             pig_options.append({'pig': pig, 'is_planned': is_planned, 'is_actual_participant': is_actual_participant, 'current_strategy_profile': current_strategy, 'current_strategy_summary': f"D {current_strategy['phase_1']} • M {current_strategy['phase_2']} • F {current_strategy['phase_3']}", 'can_toggle': can_toggle, 'disabled_reason': disabled_reason, 'weekly_commitments': projected_commitments, 'quota_remaining': max(0, weekly_quota - weekly_commitments_pig), 'projected_remaining': max(0, weekly_quota - projected_commitments)})
-        schedule.append({'slot': slot_time, 'slot_key': slot_time.strftime('%Y-%m-%dT%H:%M:%S'), 'day_name': JOURS_FR[slot_time.weekday()], 'theme': get_course_theme(slot_time), 'race': race, 'participants': slot_participants, 'planned_count': len(slot_plan_rows), 'user_plans': slot_user_plans, 'user_plan_names': [plan.pig.name for plan in slot_user_plans if plan.pig], 'is_next': slot_time == slots[0], 'is_locked': slot_locked, 'pig_options': pig_options, 'user_weekly_plan_count': len(slot_user_plans), 'user_weekly_remaining': {pig.id: max(0, weekly_quota - week_commitments.get(pig.id, 0)) for pig in pigs}})
+        schedule.append({'slot': slot_time, 'slot_key': slot_time.strftime('%Y-%m-%dT%H:%M:%S'), 'day_name': JOURS_FR[slot_time.weekday()], 'theme': get_course_theme(slot_time), 'race': race, 'participants': slot_participants, 'planned_count': len(slot_plan_rows), 'user_plans': slot_user_plans, 'user_plan_names': [plan.pig.name for plan in slot_user_plans if plan.pig], 'is_next': slot_time == slots[0], 'is_locked': slot_locked, 'lock_reason': lock_reason, 'pig_options': pig_options, 'user_weekly_plan_count': len(slot_user_plans), 'user_weekly_remaining': {pig.id: max(0, weekly_quota - week_commitments.get(pig.id, 0)) for pig in pigs}})
     return schedule

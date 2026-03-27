@@ -5,7 +5,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Derby des Groins &mdash; La L&eacute;gende du COMOP</title>
+  <title>Derby des Groins &mdash; La L&eacute;gende du GROSMOP</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -82,7 +82,7 @@
       border-color: rgba(139,92,246,0.12);
     }
 
-    /* ── Notification COMOP ── */
+    /* ── Notification GROSMOP ── */
     #meeting {
       position: absolute;
       z-index: 10;
@@ -284,9 +284,9 @@
     <!-- Titre -->
     <div class="text-center mb-6">
       <h1 class="text-2xl sm:text-3xl md:text-4xl text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 drop-shadow-lg">
-        La L&eacute;gende du COMOP
+        La L&eacute;gende du GROSMOP
       </h1>
-      <p class="text-purple-300/60 text-sm mt-1">Le Chef de Porc-jet veut caler un COMOP &mdash; Attrape-le si tu peux !</p>
+      <p class="text-purple-300/60 text-sm mt-1">Le Chef de Porc-jet veut caler un GROSMOP &mdash; Attrape-le si tu peux !</p>
     </div>
 
     <div class="grid gap-4 sm:gap-6 items-start lg:grid-cols-[minmax(0,1fr)_270px]">
@@ -297,10 +297,10 @@
           <!-- G&eacute;n&eacute;r&eacute; en JS -->
         </div>
 
-        <!-- Notification COMOP -->
+        <!-- Notification GROSMOP -->
         <div id="meeting">
           <span id="meeting-icon">🐷</span>
-          <span id="meeting-text">COMOP</span>
+          <span id="meeting-text">GROSMOP</span>
         </div>
 
         <!-- Overlay -->
@@ -335,7 +335,7 @@
 
         <!-- Score -->
         <section class="rounded-xl p-4 text-center" style="background: rgba(88,28,135,0.1); border: 1px solid rgba(139,92,246,0.1);">
-          <div class="text-xs text-purple-300/40 uppercase tracking-wide font-bold mb-1">COMOPs attrap&eacute;s</div>
+          <div class="text-xs text-purple-300/40 uppercase tracking-wide font-bold mb-1">GROSMOPs attrap&eacute;s</div>
           <div class="text-2xl font-title"><span id="score-display">0</span> / {{ required_catches }}</div>
         </section>
 
@@ -807,7 +807,7 @@
       // Apr&egrave;s 1.5s, la r&eacute;v&eacute;lation
       setTimeout(() => {
         if (!data.ok) {
-          showOverlay('<p class="text-red-400 text-lg font-bold">' + (data.error || 'Le COMOP a englouti la récompense.') + '</p>', remainingPlays > 0);
+          showOverlay('<p class="text-red-400 text-lg font-bold">' + (data.error || 'Le GROSMOP a englouti la r&eacute;compense.') + '</p>', remainingPlays > 0);
           return;
         }
         if (typeof data.new_balance === 'number') {
@@ -856,9 +856,9 @@
     showOverlay(`
       <div class="text-5xl mb-3">&#x23F0;</div>
       <p class="text-2xl font-title text-red-400 mb-2">Temps &eacute;coul&eacute; !</p>
-      <p class="text-purple-200 mb-1">${score} / ${REQUIRED_CATCHES} COMOPs attrap&eacute;s</p>
+      <p class="text-purple-200 mb-1">${score} / ${REQUIRED_CATCHES} GROSMOPs attrap&eacute;s</p>
       <p class="text-purple-300/50 text-sm italic">"${pick(BOSS_LOSE_PHRASES)}"</p>
-      <p class="text-purple-300/30 text-xs mt-3">${remainingPlays > 0 ? 'Il te reste ' + remainingPlays + ' partie(s) ! Retente ta chance.' : 'Reviens demain pour r&eacute;essayer d\'attraper le COMOP fant&ocirc;me.'}</p>
+      <p class="text-purple-300/30 text-xs mt-3">${remainingPlays > 0 ? 'Il te reste ' + remainingPlays + ' partie(s) ! Retente ta chance.' : 'Reviens demain pour r&eacute;essayer d\'attraper le GROSMOP fant&ocirc;me.'}</p>
     `, remainingPlays > 0);
   }
 
@@ -870,7 +870,7 @@
         <button id="start-btn"
           class="mt-4 px-7 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700
                  text-white font-bold rounded-xl shadow-lg transition-all hover:scale-105 text-lg">
-          Rejoindre le COMOP
+          Rejoindre le GROSMOP
         </button>`;
       setTimeout(() => {
         const btn = document.getElementById('start-btn');
@@ -894,17 +894,17 @@
       showOverlay(`
         <div class="text-5xl mb-3">&#x1F4C5;</div>
         <p class="text-xl font-title text-purple-300 mb-2">D&eacute;j&agrave; jou&eacute; aujourd'hui !</p>
-        <p class="text-purple-300/40 text-sm">Tu as utilis&eacute; tes 2 parties du jour.<br>Le Chef de Porc-jet a &eacute;puis&eacute; son quota de COMOPs annul&eacute;s.<br>Reviens demain !</p>
+        <p class="text-purple-300/40 text-sm">Tu as utilis&eacute; tes 2 parties du jour.<br>Le Chef de Porc-jet a &eacute;puis&eacute; son quota de GROSMOPs annul&eacute;s.<br>Reviens demain !</p>
       `, false);
     } else {
       showOverlay(`
         <div class="text-5xl mb-3">&#x1F4E7;</div>
         <p class="text-xl font-title text-orange-400 mb-1">Nouvelle invitation Porc-Look</p>
         <p class="text-purple-300/60 text-sm mb-1 max-w-xs">
-          Le Chef de Porc-jet t'a invit&eacute; au COMOP.<br>
+          Le Chef de Porc-jet t'a invit&eacute; au GROSMOP.<br>
           Attrape-le avant qu'il ne l'annule... encore.
         </p>
-        <p class="text-purple-300/30 text-xs mb-2">&#x26A0; Attention : un COMOP n'a peut-&ecirc;tre jamais exist&eacute;.</p>
+        <p class="text-purple-300/30 text-xs mb-2">&#x26A0; Attention : un GROSMOP n'a peut-&ecirc;tre jamais exist&eacute;.</p>
       `, true);
     }
   }

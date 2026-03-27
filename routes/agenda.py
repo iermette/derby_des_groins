@@ -97,18 +97,18 @@ def agenda_win():
         user.id,
         AGENDA_REWARD,
         reason_code='agenda_win',
-        reason_label='COMOP atteint',
-        details=f'{catches} COMOP(s) attrapé(s) en 30s. Dédommagement psychologique crédité.',
+        reason_label='GROSMOP atteint',
+        details=f'{catches} GROSMOP(s) attrapé(s) en 30s. Dédommagement pour illusion de management.',
         reference_type='user',
         reference_id=user.id,
     )
 
     Trophy.award(
         user_id=user.id,
-        code='legende_du_comop',
+        code='legende_du_grosmop',
         label='Ceinture Noire de Porc-Look',
         emoji='🐷',
-        description='A survécu au Chef de Porc-jet et attrapé 5 COMOPs fantômes en 30 secondes.',
+        description='A survécu au Chef de Porc-jet et attrapé 5 GROSMOPs fantômes en 30 secondes.',
     )
 
     db.session.commit()
