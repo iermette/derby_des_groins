@@ -13,14 +13,14 @@
     #stats-panel { width: 300px; flex-shrink: 0; background: linear-gradient(180deg, rgba(15,10,30,0.98), rgba(8,6,18,0.99)); border-left: 1px solid rgba(255,255,255,0.06); overflow-y: auto; padding: 1rem; }
     @media (max-width: 767px) { #circuit-wrap { flex-direction: column; } #svg-area { flex: 1; min-height: 0; } #stats-panel { width: 100%; height: 40vh; border-left: none; border-top: 1px solid rgba(255,255,255,0.06); } }
     .track-bg { fill: none; stroke: rgba(255,255,255,0.06); stroke-linecap: round; }
-    .pig-marker { transition: transform 0.45s linear; }
+    .pig-marker { transition: transform 0.4s linear; }
     .pig-label { font-size: 10px; fill: white; text-anchor: middle; dominant-baseline: hanging; opacity: 0.7; }
     #countdown-overlay { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.85); pointer-events: none; }
     #countdown-text { font-size: clamp(4rem, 20vw, 12rem); font-weight: 900; background: linear-gradient(135deg, #fbbf24, #f97316); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     #victory-overlay { position: fixed; inset: 0; z-index: 60; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.8); }
     #victory-overlay.active { display: flex; }
     .victory-card { text-align: center; }
-    #lobby-overlay { position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, rgba(39,13,49,0.97), rgba(8,6,18,0.99)); }
+    #idle-overlay { position: fixed; inset: 0; z-index: 35; display: none; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(ellipse at center,rgba(15,10,30,0.97),rgba(8,6,18,0.99)); }
     .pig-stat-card { border: 1px solid rgba(255,255,255,0.06); border-radius: 0.75rem; padding: 0.6rem 0.75rem; margin-bottom: 0.5rem; background: rgba(255,255,255,0.02); }
     .stat-mini-bar { height: 3px; border-radius: 2px; transition: width 0.4s ease; }
     .stat-mini-bar-bg { background: rgba(255,255,255,0.06); }
@@ -34,26 +34,24 @@
     <p style="margin-top:1rem;color:rgba(255,255,255,0.4);font-size:0.85rem;">Chargement du circuit…</p>
   </div>
 
-  <div id="lobby-overlay" style="display:none;">
-    <div class="text-center space-y-6 max-w-xl px-4">
+  <div id="idle-overlay" style="position:fixed;inset:0;z-index:35;display:none;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(15,10,30,0.97),rgba(8,6,18,0.99));">
+    <div class="text-center space-y-6 max-w-xl px-4" id="next-race-scheduled-view" style="display:none;">
       <p class="text-sm uppercase tracking-[0.35em] text-amber-200/60">Prochaine course (5 tours)</p>
-      <h1 class="text-5xl font-black text-amber-100">🏁 Course #<span id="lobby-race-id">—</span></h1>
-      <div id="lobby-countdown" class="text-7xl font-black text-amber-300">—</div>
-      <div id="lobby-participants" class="grid grid-cols-2 gap-2 mt-6 text-left"></div>
-      <div id="lobby-bets" class="mt-4 text-left space-y-1"></div>
+      <h1 class="text-5xl font-black text-amber-100">🏁 Course #<span id="next-race-id-display">—</span></h1>
+      <div id="next-race-countdown-display" class="text-7xl font-black text-amber-300">—</div>
+      <div id="next-race-participants-display" class="grid grid-cols-2 gap-2 mt-6 text-left"></div>
+      <div id="next-race-bets-display" class="mt-4 text-left space-y-1"></div>
+      <button onclick="closeCircuit()" class="px-5 py-2.5 rounded-xl border border-white/10 bg-white/5 text-white/60 font-bold mt-6">✕ Fermer</button>
+    </div>
+    <div class="text-center space-y-6 max-w-lg px-4" id="no-race-scheduled-view" style="display:none;">
+      <div style="font-size:5rem;">🐷</div>
+      <h1 class="text-4xl font-black text-white/80" id="no-race-title">Aucune course en cours</h1>
+      <p class="text-sm text-white/40 max-w-md mx-auto">Revenez plus tard, ou contactez l'administrateur pour programmer une course.</p>
+      <button onclick="closeCircuit()" class="px-5 py-2.5 rounded-xl border border-white/10 bg-white/5 text-white/60 font-bold mt-6">✕ Fermer</button>
     </div>
   </div>
 
   <div id="countdown-overlay" style="display:none;"><div id="countdown-text">3</div></div>
-
-  <div id="idle-overlay" style="position:fixed;inset:0;z-index:35;display:none;flex-direction:column;align-items:center;justify-content:center;background:#080d1a;">
-    <div class="text-center space-y-6">
-      <div style="font-size:5rem;">🐷</div>
-      <h1 class="text-4xl font-black text-white/80">Aucune course en cours</h1>
-      <div id="idle-next-info" class="text-sm text-white/30"></div>
-      <button onclick="closeCircuit()" class="px-5 py-2.5 rounded-xl border border-white/10 bg-white/5 text-white/60 font-bold">✕ Fermer</button>
-    </div>
-  </div>
 
   <div id="circuit-wrap" style="display:none;">
     <div id="svg-area">
@@ -65,7 +63,7 @@
         </g>
       </svg>
       <div style="position:absolute; top:1rem; left:1rem; font-size:0.7rem; color:rgba(255,255,255,0.4);">
-        <span id="info-race">—</span> · <span id="info-turn">Tour 0</span> · 🏁 5 tours
+        <span id="info-race">—</span> · <span id="info-turn">Tour 0 / 5</span> · 🏁 3000m
       </div>
     </div>
     <div id="stats-panel">
@@ -79,8 +77,8 @@
     <div class="victory-card space-y-4">
       <div id="victory-emoji" style="font-size:6rem;"></div>
       <div class="text-4xl font-black text-amber-200" id="victory-name"></div>
-      <div id="victory-podium" class="mt-6 space-y-1 text-sm"></div>
-      <button onclick="closeCircuit()" class="mt-6 tb-btn">Fermer</button>
+      <div id="victory-podium" class="mt-6 space-y-1 text-sm text-left inline-block"></div>
+      <button onclick="closeCircuit()" class="mt-6 tb-btn block mx-auto">Fermer</button>
     </div>
   </div>
 
@@ -93,7 +91,8 @@
 const PIG_COLORS = ['#f87171','#fb923c','#facc15','#4ade80','#22d3ee','#818cf8','#e879f9','#f472b6','#a3e635','#fca5a5','#fdba74','#fde68a'];
 let replayData = null; let totalLength = 3000; let turnIndex = 0; let isPlaying = false; let playInterval = null; let speedMultiplier = 1;
 let lastFinishedRaceId = null; let currentPhase = 'idle'; let pathElement = null; let pathLength = 0;
-let victoryHold = false; // Flag pour empêcher le polling de masquer l'écran de victoire
+let victoryHold = false; let currentLobbyRaceId = null; let isFirstPoll = true;
+let adaptiveDelay = 500; // Délai par défaut
 
 function initTrack() {
   pathElement = document.getElementById('track-bg-path');
@@ -123,7 +122,9 @@ function updatePositions(turnData) {
   turnData.pigs.forEach((pig, i) => {
     const el = document.getElementById(`pig-${pig.id}`); if (!el) return;
     const lapDistance = 600;
-    const distanceInLap = pig.distance % lapDistance;
+    // Si le cochon a fini ses 5 tours, il s'arrête sur la ligne
+    const isActuallyFinished = pig.is_finished && pig.distance >= 3000;
+    const distanceInLap = isActuallyFinished ? 0 : (pig.distance % lapDistance);
     const ratio = distanceInLap / lapDistance;
     const pt = pathElement.getPointAtLength(ratio * pathLength);
     const offset = (i - 4) * 4;
@@ -132,16 +133,24 @@ function updatePositions(turnData) {
 }
 
 function startAnimation(replay) {
-  replayData = replay; turnIndex = 0; totalLength = 3000; isPlaying = true; victoryHold = true;
+  replayData = replay; turnIndex = 0; isPlaying = true; victoryHold = true;
+
+  // CALCUL DE LA VITESSE POUR DURER EXACTEMENT 50 SECONDES (50000ms)
+  const totalTurns = replay.turns.length;
+  adaptiveDelay = totalTurns > 0 ? (50000 / totalTurns) : 500;
+
   const pigs = replay.turns[0].pigs.map(p => ({ id: p.id, name: p.name, emoji: '🐷' }));
   if (replay.participant_meta) {
     pigs.forEach(p => { const m = replay.participant_meta[String(p.id)]; if (m) { p.emoji = m.emoji; p.avatar_url = m.avatar_url; } });
   }
   createPigMarkers(pigs);
-  const container = document.getElementById('stats-cards'); container.innerHTML = pigs.map((p, i) => `<div class="pig-stat-card" id="stat-${p.id}"><div class="flex items-center gap-2">${pigVisualHTML(p, 20)} <span class="text-xs font-bold" style="color:${PIG_COLORS[i%12]}">${p.name}</span> <span class="ml-auto text-[10px]" id="stat-pos-${p.id}">#—</span></div><div class="stat-mini-bar-bg mt-2"><div class="stat-mini-bar" id="bar-${p.id}" style="width:0%; background:#22d3ee"></div></div></div>`).join('');
+  const container = document.getElementById('stats-cards');
+  container.innerHTML = pigs.map((p, i) => `<div class="pig-stat-card" id="stat-${p.id}"><div class="flex items-center gap-2">${pigVisualHTML(p, 20)} <span class="text-xs font-bold" style="color:${PIG_COLORS[i%12]}">${p.name}</span> <span class="ml-auto text-[10px]" id="stat-pos-${p.id}">#—</span></div><div class="stat-mini-bar-bg mt-2"><div class="stat-mini-bar" id="bar-${p.id}" style="width:0%; background:#22d3ee"></div></div></div>`).join('');
 
+  document.getElementById('loading-overlay').style.display = 'none';
   document.getElementById('idle-overlay').style.display = 'none';
-  document.getElementById('lobby-overlay').style.display = 'none';
+  document.getElementById('countdown-overlay').style.display = 'none';
+  document.getElementById('victory-overlay').classList.remove('active');
   document.getElementById('circuit-wrap').style.display = 'flex';
   document.getElementById('toolbar').style.display = 'flex';
   document.getElementById('info-race').textContent = `Course #${replay.race_id || '?'}`;
@@ -157,21 +166,31 @@ function playTick() {
     const pEl = document.getElementById(`stat-pos-${p.id}`); if (!pEl) return;
     const pos = sorted.findIndex(s => s.id === p.id) + 1;
     pEl.textContent = p.is_finished ? '🏁' : `#${pos}`;
-    document.getElementById(`bar-${p.id}`).style.width = `${(p.distance / 3000) * 100}%`;
+    document.getElementById(`bar-${p.id}`).style.width = `${Math.min(100, (p.distance / 3000) * 100)}%`;
   });
-  document.getElementById('info-turn').textContent = `Tour ${Math.min(5, Math.floor(sorted[0].distance / 600) + 1)} / 5`;
+  const leaderDist = sorted[0].distance;
+  document.getElementById('info-turn').textContent = `Tour ${Math.min(5, Math.floor(leaderDist / 600) + 1)} / 5`;
   turnIndex++;
-  playInterval = setTimeout(playTick, 500 / speedMultiplier);
+  playInterval = setTimeout(playTick, adaptiveDelay / speedMultiplier);
 }
 
 function finishAnimation() {
   isPlaying = false;
   const last = replayData.turns[replayData.turns.length - 1];
-  const winner = [...last.pigs].sort((a,b) => b.distance - a.distance)[0];
+  const sorted = [...last.pigs].sort((a,b) => b.distance - a.distance);
+  const winner = sorted[0];
   document.getElementById('victory-name').textContent = `${winner.name} GAGNE !`;
-  document.getElementById('victory-overlay').classList.add('active');
+  const victoryEmojiEl = document.getElementById('victory-emoji');
+  const winnerMeta = replayData.participant_meta?.[String(winner.id)];
+  victoryEmojiEl.innerHTML = winnerMeta?.avatar_url ? `<img src="${winnerMeta.avatar_url}" width="96" height="96" class="mx-auto">` : (winnerMeta?.emoji || '🐷');
 
-  // On maintient l'écran de victoire pendant 15 secondes avant de laisser le polling reprendre la main
+  const podium = document.getElementById('victory-podium');
+  podium.innerHTML = sorted.slice(0, 5).map((p, i) => {
+    const medals = ['🥇','🥈','🥉','4️⃣','5️⃣'];
+    const meta = replayData.participant_meta?.[String(p.id)];
+    return `<div class="flex items-center gap-2 text-white/70 py-1"><span>${medals[i]}</span>${pigVisualHTML(meta || p, 20)}<span class="font-bold">${p.name}</span></div>`;
+  }).join('');
+  document.getElementById('victory-overlay').classList.add('active');
   setTimeout(() => { victoryHold = false; }, 15000);
 }
 
@@ -182,44 +201,94 @@ function closeCircuit() {
   else window.location.href = '/';
 }
 
-async function pollState() {
-  // Si on est en train de jouer l'animation ou de montrer la victoire, on ne touche à rien
-  if (isPlaying || victoryHold) return;
+async function loadLobbyInfo(raceId) {
+  try {
+    const resp = await fetch(`/api/race/${raceId}/pre-race`);
+    const data = await resp.json();
+    const pContainer = document.getElementById('next-race-participants-display');
+    pContainer.innerHTML = (data.participants || []).map(p =>
+      `<div class="flex items-center gap-2 px-3 py-2 rounded-lg border border-white/6 bg-white/3">
+        ${p.avatar_url ? `<img src="${p.avatar_url}" width="24" height="24" style="image-rendering:pixelated;border-radius:4px;">` : `<span style="font-size:1.3rem;">${p.emoji}</span>`}
+        <div class="min-w-0">
+          <div class="text-xs font-bold truncate">${p.name}</div>
+          <div class="text-[10px] text-white/30">${p.owner_name || 'NPC'} · x${p.odds ? p.odds.toFixed(1) : '?'}</div>
+        </div>
+      </div>`
+    ).join('');
+    await loadBets(raceId, 'next-race-bets-display');
+  } catch (e) { console.warn('Lobby load error', e); }
+}
 
+async function loadBets(raceId, containerId) {
+  try {
+    const resp = await fetch(`/api/race/${raceId}/bets-spectator`);
+    const data = await resp.json();
+    const container = document.getElementById(containerId);
+    if (!container || !data.bets || data.bets.length === 0) {
+      if (container) container.innerHTML = '<div class="text-xs text-white/30">Aucun pari placé</div>';
+      return;
+    }
+    container.innerHTML = data.bets.map(b => `<div class="flex gap-2 text-xs text-white/50"><span class="text-white/70 font-bold">${b.username}</span><span>→ ${b.pig_name}</span><span class="text-amber-300">${b.amount}G</span><span class="text-white/30">(x${b.odds || '?'})</span></div>`).join('');
+  } catch (e) {}
+}
+
+async function pollState() {
+  if (isPlaying || victoryHold) return;
   try {
     const r = await fetch('/api/race/live-state'); const s = await r.json();
     if (document.getElementById('loading-overlay')) document.getElementById('loading-overlay').style.display = 'none';
-
-    // Si une nouvelle course vient de finir, on lance l'animation
+    if (isFirstPoll) { lastFinishedRaceId = s.finished_race_id; isFirstPoll = false; }
     if (s.finished_race_id && s.finished_race_id !== lastFinishedRaceId) {
       lastFinishedRaceId = s.finished_race_id;
-      const repR = await fetch(`/api/race/${s.finished_race_id}/replay`); const rep = await repR.json();
-      if (rep.turns) {
-        startAnimation(rep);
-        return; // On sort pour laisser l'animation prendre le contrôle
-      }
-    }
-
-    // Gestion des overlays de transition (seulement si on ne joue pas)
-    currentPhase = s.phase;
-    if (s.phase === 'idle') {
-      document.getElementById('idle-overlay').style.display = 'flex';
-      document.getElementById('lobby-overlay').style.display = 'none';
-      document.getElementById('victory-overlay').classList.remove('active');
-      document.getElementById('circuit-wrap').style.display = 'none';
-      document.getElementById('idle-next-info').textContent = s.seconds_to_start ? `Prochaine course dans ${Math.floor(s.seconds_to_start/60)}m ${s.seconds_to_start%60}s` : 'Aucune course prévue';
-    } else if (s.phase === 'pre_race' || s.phase === 'countdown') {
       document.getElementById('idle-overlay').style.display = 'none';
-      document.getElementById('victory-overlay').classList.remove('active');
-      document.getElementById('circuit-wrap').style.display = 'none';
-      document.getElementById('lobby-overlay').style.display = 'flex';
-      document.getElementById('lobby-race-id').textContent = s.race_id;
-      document.getElementById('lobby-countdown').textContent = `${s.seconds_to_start}s`;
-    } else if (s.phase === 'racing') {
-      document.getElementById('lobby-overlay').style.display = 'none';
-      // Attente de la fin de course serveur
+      document.getElementById('countdown-overlay').style.display = 'none';
+      const repR = await fetch(`/api/race/${s.finished_race_id}/replay`);
+      const rep = await repR.json();
+      if (rep.turns) { startAnimation(rep); return; }
+    }
+    document.getElementById('circuit-wrap').style.display = 'none';
+    document.getElementById('victory-overlay').classList.remove('active');
+    document.getElementById('countdown-overlay').style.display = 'none';
+    if (s.race_id) {
+      document.getElementById('idle-overlay').style.display = 'flex';
+      document.getElementById('no-race-scheduled-view').style.display = 'none';
+      document.getElementById('next-race-scheduled-view').style.display = 'block';
+      document.getElementById('next-race-id-display').textContent = s.race_id;
+      const m = Math.floor(s.seconds_to_start / 60), sec = s.seconds_to_start % 60;
+      document.getElementById('next-race-countdown-display').textContent = m > 0 ? `${m}:${String(sec).padStart(2,'0')}` : `${sec}s`;
+      if (s.race_id !== currentLobbyRaceId) { currentLobbyRaceId = s.race_id; await loadLobbyInfo(s.race_id); }
+      if (s.phase === 'countdown') { document.getElementById('idle-overlay').style.display = 'none'; showDramaticCountdown(s.seconds_to_start); }
+      else if (s.phase === 'racing') {
+        document.getElementById('idle-overlay').style.display = 'flex';
+        document.getElementById('next-race-scheduled-view').style.display = 'none';
+        document.getElementById('no-race-scheduled-view').style.display = 'block';
+        document.getElementById('no-race-title').textContent = "🏁 Course en cours...";
+        document.getElementById('no-race-message').textContent = "Calcul des trajectoires...";
+      }
+    } else {
+      document.getElementById('idle-overlay').style.display = 'flex';
+      document.getElementById('no-race-scheduled-view').style.display = 'block';
+      document.getElementById('next-race-scheduled-view').style.display = 'none';
     }
   } catch(e) {}
+}
+
+function showDramaticCountdown(seconds) {
+  const overlay = document.getElementById('countdown-overlay');
+  const textEl = document.getElementById('countdown-text');
+  overlay.style.display = 'flex';
+  let current = Math.min(10, seconds);
+  const tick = () => {
+    if (current <= 0) {
+      textEl.textContent = 'GO!';
+      setTimeout(() => { overlay.style.display = 'none'; }, 800);
+      return;
+    }
+    textEl.textContent = current;
+    current--;
+    setTimeout(tick, 1000);
+  };
+  tick();
 }
 
 document.addEventListener('DOMContentLoaded', () => { initTrack(); pollState(); setInterval(pollState, 3000); });
