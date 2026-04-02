@@ -224,6 +224,7 @@ def migrate_db():
         ('pig', 'avatar_id', 'INTEGER'),
         ('user', 'last_agenda_at', 'TIMESTAMP'),
         ('user', 'agenda_plays_today', "INTEGER DEFAULT 0 NOT NULL"),
+        ('chat_message', 'parent_id', 'INTEGER'),
     ]
     table_migrations = [
         'ALTER TABLE game_config ALTER COLUMN value TYPE TEXT',
@@ -244,6 +245,7 @@ def migrate_db():
         'CREATE INDEX IF NOT EXISTS ix_poker_player_table ON poker_player(table_id)',
         'CREATE INDEX IF NOT EXISTS ix_poker_player_user ON poker_player(user_id)',
         'CREATE INDEX IF NOT EXISTS ix_poker_hand_table ON poker_hand_history(table_id)',
+        'CREATE INDEX IF NOT EXISTS ix_chat_message_timestamp ON chat_message(timestamp)',
     ]
     with db.engine.connect() as conn:
         for statement in table_migrations:
